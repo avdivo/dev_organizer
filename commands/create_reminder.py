@@ -1,5 +1,6 @@
+from user import user
 from config import embedding_db, openai_client, DEFAULT_LIST
-from functions import (extract_json_to_dict, check_metadata, generate_job_id,
+from functions import (extract_json_to_dict, generate_job_id,
                        register_job, iso_timestamp_converter)
 
 
@@ -45,13 +46,14 @@ def create_reminder(answer: dict) -> str:
                 if not metadata or not job:
                     continue
                 metadata["list_name"] = list_name  # Добавляем название списка
-                metadata = check_metadata(metadata)  # Проверяем и корректируем метаданные
                 metadata["completed"] = False  # Добавляем признак удаления
                 job_id = generate_job_id()  # Генерируем уникальный идентификатор задания
                 metadata["job_id"] = job_id  # Записываем идентификатор в метаданные
                 text = metadata["text"] if metadata.get("text", "") else query  # Документ заменяем на text от модели
                 metadata["timestamp_create"] = iso_timestamp_converter(metadata["datetime_create"])  # timestamp даты
-                metadata["timestamp_reminder"] = iso_timestamp_converter(metadata["datetime_reminder"])  # timestamp даты
+                metadata["timestamp_reminder"] = iso_timestamp_converter(
+                    metadata["datetime_reminder"])  # timestamp даты
+                metadata["user"] = str(user.id)  # Добавляем пользователя
                 embedding_db.add_text([text], [metadata])  # Добавляем заметки в базу
                 register_job(job_id, text, job)  # Ставим задачу напоминание
                 answer_list.append(reminder.get("answer", "Напоминание сохранено"))
@@ -62,7 +64,7 @@ def create_reminder(answer: dict) -> str:
     except Exception as e:
         raise
         print("Ошибка обработки ответа модели", e)
-        return False
+        return ""
 
     return ", ".join(answer_list)
 

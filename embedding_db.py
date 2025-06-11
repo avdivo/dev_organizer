@@ -86,8 +86,9 @@ class EmbeddingDatabase:
             if word_for_search:
                 # Активация поиска документа по слову
                 param["where_document"] = word_for_search
-            print("filter_metadata", filter_metadata)
+            print("filter_metadata", param)
             results = self.vector_store.get(**param)
+            print("Результат сразу после запроса", results)
             # print(self.vector_store._collection.get(include=["embeddings", "documents", "metadatas"]))  # Показывает всю базу
             if not results["documents"]:
                 return []

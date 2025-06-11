@@ -43,6 +43,7 @@ table_creator.create_tables_sync()
 
 sql_db = SQLiteClient(db_path)
 
+print("Инициализация службы оповещений")
 # Инициализация APScheduler
 scheduler = BackgroundScheduler(
     jobstores={"default": SQLAlchemyJobStore(url='sqlite:///jobs.sqlite')}

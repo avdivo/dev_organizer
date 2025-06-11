@@ -21,7 +21,7 @@ class OpenAIClient:
         system_prompt (str): Системный промпт, задающий контекст чата.
     """
 
-    def __init__(self, api_key: str, model: str = "gpt-4.1"):
+    def __init__(self, api_key: str, model: str = "gpt-4.1-mini"):
         """
         Инициализация OpenAI клиента.
 
@@ -80,6 +80,13 @@ class OpenAIClient:
             # Добавляем дату и время
             self.user_base_prompt = f"Сейчас: {date} {time} {self.days_of_week_ru[weekday]}\n"
             self.user_base_prompt += content[1].replace("USER:\n", "").strip()
+
+        # Добавляем метаданные
+        with open("prompts/metadata_list.txt", "r", encoding="utf-8") as f:
+            text = f.read()
+
+        metadata_list = ", ".join([item.strip() for item in text.split(",") if item.strip()])
+        self.user_base_prompt = self.user_base_prompt.replace("<metadata list>", metadata_list)
 
     @traceable
     def chat_sync(self, user_message: str) -> Optional[str]:

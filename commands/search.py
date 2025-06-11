@@ -40,16 +40,22 @@ def search(answer: dict, question: str = "") -> str:
     if list_name:
         filters.append({"list_name": {"$eq": list_name}})  # Добавляем список в фильтры
     filters.append({"user": {"$eq": str(user.id)}})  # Добавляем список в фильтры
-    print("После функции", filters)
     if len(filters) > 1:
         filters = {"$and": filters}
     else:
         filters = filters[0]
+    print("После функции", filters)
 
     if search == "semantic":
         # Поиск по смыслу с фильтрами
         answer = ", ".join(embedding_db.get_notes(query_text=question, filter_metadata=filters))
-        return f"Ответ по смыслу: {answer}"
+
+        # Запрос к LLM
+        openai_client.load_prompt("semantic")  # Загрузка промпта
+        answer = openai_client.chat_sync(f"\n Заметки для ответа:\n{answer}\n\nВопрос: {question}")
+
+        return answer
+
     else:
         # Поиск по фильтрам
         query = {"filter_metadata": filters, "get_metadata": True}
@@ -70,13 +76,18 @@ def search(answer: dict, question: str = "") -> str:
     func_list = ["sum", "avg", "min", "max", "count"]
     func = args[1] if args[1] in func_list else "sum"
 
+    with open("prompts/metadata_list.txt", "r", encoding="utf-8") as f:
+        text = f.read()
+
+    # Разделение и очистка
+    metadata_list = [item.strip() for item in text.split(",") if item.strip()]
+
     try:
         field = args[2]  # Определяем поле
-        if field not in ["price", "quantity", "rating", "number"]:
-            field = "price"
-            comment = "Поле не опознано, по умолчанию посчитано для цен"
+        if field not in metadata_list:
+            comment = "Поле не опознано, если данных не будет, возможно оно ошибочное.\n"
     except:
-        field = "price"  # Поле по умолчанию
+        field = "рубли"  # Поле по умолчанию
 
     # Получаем нужные данные из метаданных записей
     values = []
@@ -92,7 +103,7 @@ def search(answer: dict, question: str = "") -> str:
 
     res = 0
     if not len(values):
-        comment = "Подходящих записей не найдено"
+        comment += "Подходящих записей не найдено"
     else:
         if func == func_list[0]:
             # Сумма
@@ -115,7 +126,7 @@ def search(answer: dict, question: str = "") -> str:
     query = (f"Вопрос: {question}\n\n "
              f"По {len(values)} записям, включи это значение в ответ\n"
              f"Результат: {res}\n"
-             f"Поле только если по контексту ответа не понятно, говори по русски: {field} \n "
+             f"Если по контексту ответа не понятно что считаем, включи: {field} \n "
              f"Уточни, в каком списке: {list_name if list_name else 'все'}"
              f"\n{comment}")
 

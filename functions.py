@@ -2,7 +2,6 @@ import re
 import json
 import time
 import uuid
-from user import user
 from typing import Dict, List, Any, Union, Optional
 from apscheduler.job import Job
 from ast import literal_eval
@@ -10,34 +9,6 @@ from jobs import reminder_job
 from config import scheduler
 from datetime import datetime, timezone
 from dateutil import parser
-
-def check_metadata(metadata: dict) -> dict:
-    """
-    Уточнение и корректировка метаданных найденных моделями
-      {
-        "text": факт 1 (обязательное поле)
-        "price": сумма/цена,
-        "datetime_create": создания заметки (обязательное поле)
-        "quantity": количество
-        "number": номер или цифра которую нельзя отнести к имеющимся
-        "rating": рейтинг
-        "scheduled_datetime":  если заметка предполагает напоминание записать начало
-    }
-    Args:
-        metadata (dict): словарь с метаданными от модели
-
-    Returns:
-        dict: уточненный словарь
-    """
-    list_keys = ["text", "price", "datetime_create", "quantity", "number", "rating",
-                 "list_name", "datetime_reminder"]
-    out = {}
-    for key in list_keys:
-        if key in metadata and metadata[key] != "":
-            out[key] = metadata[key]
-    out["user"] = str(user.id)  # Добавляем пользователя
-
-    return out
 
 
 # def convert_to_chroma_filter(data: Dict[str, str]) -> Union[Dict[str, Any], None]:
@@ -150,8 +121,6 @@ def register_job(job_id: str, message: str, job_dict: Dict) -> Job:
     return job
 
 
-def extract_and_parse_json():
-    ...
 def iso_timestamp_converter(value: Union[str, int]) -> Union[int, str]:
     """
     Конвертирует между ISO 8601 и UNIX timestamp в UTC.

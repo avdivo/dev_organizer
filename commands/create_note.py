@@ -1,5 +1,6 @@
+from user import user
 from config import embedding_db, openai_client, DEFAULT_LIST
-from functions import extract_json_to_dict, check_metadata, iso_timestamp_converter
+from functions import extract_json_to_dict, iso_timestamp_converter
 
 
 def create_note(answer: dict) -> bool:
@@ -40,10 +41,10 @@ def create_note(answer: dict) -> bool:
         metadatas = []
         for metadata in metadata_list:
             metadata["list_name"] = list_name  # Добавляем название списка
-            metadata = check_metadata(metadata)  # Проверяем и корректируем метаданные
             metadata["completed"] = False  # Добавляем признак удаления
             text = metadata["text"] if metadata.get("text", "") else query  # Документ заменяем на text от модели
             metadata["timestamp_create"] = iso_timestamp_converter(metadata["datetime_create"])  # timestamp даты
+            metadata["user"] = str(user.id)  # Добавляем пользователя
             documents.append(text)
             metadatas.append(metadata)
             print(f"Заметки:\n{documents}\nМетаданные:\n{metadatas}")

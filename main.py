@@ -43,10 +43,12 @@ while True:
 
 
     openai_client.load_prompt("query_parser")  # Загрузка промпта
+    openai_client.set_model("gpt-4.1-mini")
 
     user_message = user_input + f"\n\nИмеющиеся списки:\n{[list_name for list_name in user.lists]}\n\n"
 
     answer = openai_client.chat_sync(user_message)
+    openai_client.set_model("gpt-4.1")
     print(answer)
     try:
         matadata = json.loads(answer)
