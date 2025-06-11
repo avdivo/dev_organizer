@@ -1,0 +1,15 @@
+chromadb>=1.0.12
+openai>=1.84.0
+langchain>=0.0.166
+langchain-community>=0.3.24
+langchain-huggingface>=0.2.0
+langchain-chroma>=0.2.4
+sentence-transformers>=4.1.0
+unstructured>=0.17.2
+langchain-openai>=0.3.19
+langsmith>=0.3.44
+aiosqlite>=0.21.0
+apscheduler[sqlalchemy]>=3.10.4
+sqlalchemy>=2.0.30
+requests>=2.32.3
+python-dateutil>=2.9.0
