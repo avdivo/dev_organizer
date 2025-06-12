@@ -10,7 +10,6 @@ from openai_client import OpenAIClient
 from embedding_db import EmbeddingDatabase
 from create_tables import SQLiteTableCreator
 
-
 # Загрузка переменных окружения
 load_dotenv()
 
@@ -24,14 +23,14 @@ MODEL_NAME = "ai-forever/ru-en-RoSBERTa"
 DEFAULT_LIST = "заметка"  # Список который должен существовать при старте системы
 
 # Инициализация модели эмбеддингов и подключение к базе данных
-print("Инициализация БД и модели эмбеддингов")
+print("✅ Инициализация БД и модели эмбеддингов")
 embedding_db = EmbeddingDatabase(persist_directory=PERSIST_DIRECTORY, model_name=MODEL_NAME)
 
 # Инициализация LLM
 # llm = ChatOpenAI(model="gpt-3.5-turbo", api_key=API_KEY)
 llm = ChatOpenAI(model="gpt-4.1-nano", api_key=OPENAI_API_KEY)
 
-print("Инициализация клиента OpenAI")
+print("✅ Инициализация клиента OpenAI")
 openai_client = OpenAIClient(api_key=OPENAI_API_KEY)
 
 # Путь к дополнительной базе данных SQLite
@@ -43,7 +42,7 @@ table_creator.create_tables_sync()
 
 sql_db = SQLiteClient(db_path)
 
-print("Инициализация службы оповещений")
+print("✅ Инициализация службы оповещений")
 # Инициализация APScheduler
 scheduler = BackgroundScheduler(
     jobstores={"default": SQLAlchemyJobStore(url='sqlite:///jobs.sqlite')}

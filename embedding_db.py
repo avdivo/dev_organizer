@@ -1,6 +1,7 @@
+from typing import Dict, List, Optional, Tuple
 from langchain_chroma import Chroma
 from langchain_huggingface import HuggingFaceEmbeddings
-from typing import Dict, List, Optional
+from langchain_core.documents import Document
 
 
 class EmbeddingDatabase:
@@ -18,7 +19,17 @@ class EmbeddingDatabase:
         :param model_name: Название модели эмбеддингов HuggingFace.
         """
         self.embedding_model = HuggingFaceEmbeddings(model_name=model_name)
-        self.vector_store = Chroma(persist_directory=persist_directory, embedding_function=self.embedding_model)
+        # self.vector_store = Chroma(persist_directory=persist_directory, embedding_function=self.embedding_model)
+
+        ids, documents = self.load_metadata_entries("prompts/metadata_list.txt")
+        self.vector_store = Chroma.from_documents(
+            documents=documents,
+            embedding=self.embedding_model,
+            ids=ids,
+            persist_directory=persist_directory  # Директория для сохранения [9, 12]
+        )
+
+        # print(self.vector_store._collection.get(include=["embeddings", "documents", "metadatas"]))  # Показывает всю базу
 
     def add_text(self, text: List[str], metadatas: List[Dict[str, str]] = None) -> None:
         """
@@ -30,22 +41,6 @@ class EmbeddingDatabase:
         metadatas = metadatas or []  # Если метаданные не переданы, создаем пустой список
         self.vector_store.add_texts(texts=text, metadatas=metadatas)  # Записываем с эмбеддингами
         print(f"✅ Заметки добавлены")
-
-    def retrieve_relevant_texts(self, query: str, k: int = 3, filter_metadata: Optional[Dict[str, str]] = None) -> List[
-        str]:
-        """
-        Извлекает релевантные записи из базы данных на основе запроса и фильтрации по метаданным.
-
-        :param query: Запрос пользователя.
-        :param k: Количество релевантных записей для извлечения.
-        :param filter_metadata: Словарь метаданных для фильтрации (например, {"категория": "заметки"}).
-        :return: Список релевантных текстов.
-        """
-        retriever = self.vector_store.as_retriever(search_kwargs={"k": k, "filter": filter_metadata or {}})
-        relevant_chunks = retriever.invoke(query)
-        return [chunk.page_content for chunk in relevant_chunks]
-
-    from typing import Optional, Dict, List, Any
 
     def get_notes(self, query_text: Optional[str] = "", k: int = 10,
                   filter_metadata: Optional[Dict[str, str]] = None,
@@ -63,15 +58,15 @@ class EmbeddingDatabase:
         :param word_for_search: слово или фраза для поиска документов
         :return: Список [{text: "...", metadata: {...}}] или [str]
         """
-        print("Сейчас в базе", self.vector_store._collection.get())  # Показывает всю базу
+        # print("Сейчас в базе", self.vector_store._collection.get())  # Показывает всю базу
 
         # Формируем словарь параметров запроса
         if query_text:
             # Поиск похожих записей по эмбеддингам и возможно метаданным
             # results = self.vector_store.similarity_search(query=query_text, k=k, filter=filter_metadata)
-            print("filter_metadata", filter_metadata)
+            # print("filter_metadata", filter_metadata)
             results = self.vector_store.similarity_search(query=query_text, k=k, filter=filter_metadata)
-            print("results", results)
+            # print("results", results)
             if not results:
                 return []
             if get_metadata:
@@ -83,12 +78,13 @@ class EmbeddingDatabase:
         else:
             # Фильтрация по метаданным
             param = {"where": filter_metadata}
+            # param = {"include": ["ids", "metadatas", "documents"]}
             if word_for_search:
                 # Активация поиска документа по слову
                 param["where_document"] = word_for_search
-            print("filter_metadata", param)
+            # print("filter_metadata", param)
             results = self.vector_store.get(**param)
-            print("Результат сразу после запроса", results)
+            # print("Результат сразу после запроса", results)
             # print(self.vector_store._collection.get(include=["embeddings", "documents", "metadatas"]))  # Показывает всю базу
             if not results["documents"]:
                 return []
@@ -99,53 +95,49 @@ class EmbeddingDatabase:
                         zip(results["documents"], results["metadatas"])]
             return [doc for doc in results["documents"]]
 
+    def load_metadata_entries(self, filepath: str) -> Tuple[list, List]:
+        """
+        Загружает записи метаданных из текстового файла и преобразует их в список объектов Document
+        с метаданными. Формирование списка ids/
 
+        Формат файла:
+        Каждая строка должна содержать запись в формате:
+            ключ: описание
+        где
+            ключ — уникальный идентификатор записи (например, speed_kmh),
+            описание — текстовое описание единицы измерения или объекта.
 
-    # def get_notes(self, filter_metadata: Optional[Dict[str, str]] = None, get_metadata: bool = False) -> List[Dict[str, Any]]:
-    #     """
-    #     Извлекает заметки, фильтруя их по метаданным (если переданы).
-    #     Возвращает список словарей с текстами заметок и их метаданными (если указаны).
-    #
-    #     :param filter_metadata: Словарь метаданных для фильтрации (например, {"категория": "проект"}).
-    #     :param get_metadata: Флаг, указывающий, нужно ли получать метаданные.
-    #     :return: Список [{text: "...", metadata: {...}}]
-    #     """
-    #
-    #     if filter_metadata:
-    #         results = self.vector_store.get(where=filter_metadata)  # Фильтрация по метаданным
-    #     else:
-    #         results = self.vector_store.get()  # Получение всех записей
-    #
-    #     documents = results["documents"]
-    #     metadatas = results["metadatas"]
-    #
-    #     # Формируем список заметок
-    #     if get_metadata:
-    #         return [{"text": doc, "metadata": meta} for doc, meta in zip(documents, metadatas)]
-    #     return [doc for doc in documents]
+        Строки, начинающиеся с '#' или пустые строки, игнорируются.
 
+        Возвращаемое значение:
+            metadata_names (list) - список ids документов
+            list of Document — список документов для векторного индексирования, где
+            page_content — описание,
+            metadata содержит поля:
+                - system: фиксированное значение "metadata_list" для фильтрации,
+                - key: ключ записи (идентификатор).
 
-# Пример использования
-if __name__ == "__main__":
-    # Установка параметров
-    PERSIST_DIRECTORY = "./chroma_db"
-    MODEL_NAME = "ai-forever/ru-en-RoSBERTa"
+        Исключения:
+            Строки, не соответствующие формату, пропускаются без ошибки.
 
-    # Инициализация базы данных эмбеддингов
-    embedding_db = EmbeddingDatabase(persist_directory=PERSIST_DIRECTORY, model_name=MODEL_NAME)
-
-    # Добавление заметок с метаданными
-    embedding_db.add_text("Пример заметки для тестирования.", {"категория": "заметки", "дата": "04.06.2025"})
-    embedding_db.add_text("Важная информация о проекте.", {"категория": "проект", "дата": "03.06.2025"})
-
-    # Запрос релевантных записей без фильтрации
-    results = embedding_db.retrieve_relevant_texts("тестирование")
-    print("\n🔍 Найденные заметки:")
-    for res in results:
-        print(f"- {res}")
-
-    # Запрос релевантных записей с фильтрацией по категории
-    filtered_results = embedding_db.retrieve_relevant_texts("информация", filter_metadata={"категория": "проект"})
-    print("\n🔍 Найденные заметки (категория: проект):")
-    for res in filtered_results:
-        print(f"- {res}")
+        Использование:
+            chunks = load_metadata_entries("/prompts/metadata_list.txt")
+        """
+        print("✅ Инициализация списка метаданных")
+        chunks = []
+        metadata_names = []
+        with open(filepath, 'r', encoding='utf-8') as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith("#"):
+                    continue
+                try:
+                    key, rest = line.split(":", 1)
+                    chunks.append(Document(
+                        page_content=rest.strip(),
+                        metadata={"system": "metadata_list"}
+                    ))
+                    metadata_names.append(key)
+                except ValueError:
+                    continue  # Пропустить строки, не соответствующие формату
+        return metadata_names, chunks

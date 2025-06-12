@@ -22,6 +22,39 @@ async def get_user_lists(alice_id: str):
     return lists
 """
 
+
+# -------------------------------------------------------------
+from config import embedding_db
+from functions import extract_json_to_dict
+
+while True:
+
+    user_input = input("Команда: ")
+    start_time = time.time()
+
+    if user_input == '0':
+        exit(0)
+
+
+    openai_client.load_prompt("get_metadata")  # Загрузка промпта
+    openai_client.set_model("gpt-4.1-mini")
+    answer_llm = openai_client.chat_sync(f"\n{user_input}")
+    print("Ответ модели:", answer_llm)
+    answer_list = extract_json_to_dict(answer_llm)
+    filters = {"system": {"$eq": "metadata_list"}}
+    for imem in answer_list:
+        d, text = next(iter(imem.items()))
+        print("\nЗапрос:", text)
+        answer = embedding_db.get_notes(query_text=text,
+                                        filter_metadata=filters, k=1, get_metadata=False)
+        for i in answer:
+            print(f"Ответ {d}:", i)
+
+    print(f'---------------------{time.time() - start_time}----------------------\n')
+# -------------------------------------------------------------
+# за 3 часа мы проехали 20 киллометров со скоростью 3 киллометров в час и сделази 3 остановки последняя была на горке высотой 3 метра
+# на 3 полке в кладовке 5 банок варения 3 из них малиновое и 2 клубничных
+# 15 человек бросали 3 мяча и сделали 300 ударов о стену
 # Запуск APScheduler
 if not scheduler.running:
     scheduler.start()
