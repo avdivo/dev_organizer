@@ -4,7 +4,7 @@ import json
 
 from user import user
 from commands import *
-from config import openai_client, LANGSMITH_API_KEY, DEFAULT_LIST, scheduler
+from config import openai_client, LANGSMITH_API_KEY, DEFAULT_LIST, scheduler, OPENAI_API_KEY
 
 
 os.environ["LANGCHAIN_API_KEY"] = LANGSMITH_API_KEY
@@ -22,35 +22,37 @@ async def get_user_lists(alice_id: str):
     return lists
 """
 
-
 # -------------------------------------------------------------
-from config import embedding_db
-from functions import extract_json_to_dict
-
-while True:
-
-    user_input = input("Команда: ")
-    start_time = time.time()
-
-    if user_input == '0':
-        exit(0)
-
-
-    openai_client.load_prompt("get_metadata")  # Загрузка промпта
-    openai_client.set_model("gpt-4.1-mini")
-    answer_llm = openai_client.chat_sync(f"\n{user_input}")
-    print("Ответ модели:", answer_llm)
-    answer_list = extract_json_to_dict(answer_llm)
-    filters = {"system": {"$eq": "metadata_list"}}
-    for imem in answer_list:
-        d, text = next(iter(imem.items()))
-        print("\nЗапрос:", text)
-        answer = embedding_db.get_notes(query_text=text,
-                                        filter_metadata=filters, k=1, get_metadata=False)
-        for i in answer:
-            print(f"Ответ {d}:", i)
-
-    print(f'---------------------{time.time() - start_time}----------------------\n')
+# from config import embedding_db
+# from functions import extract_json_to_dict
+# from openai_client import OpenAIClient
+#
+#
+# openai_client1 = OpenAIClient(api_key=OPENAI_API_KEY)
+# while True:
+#
+#     user_input = input("Команда: ")
+#     start_time = time.time()
+#
+#     if user_input == '0':
+#         break
+#
+#     openai_client1.load_prompt("get_metadata")  # Загрузка промпта
+#     openai_client1.set_model("gpt-4.1-mini")
+#     answer_llm = openai_client1.chat_sync(f"\n{user_input}")
+#     print("Ответ модели:", answer_llm)
+#     answer_list = extract_json_to_dict(answer_llm)
+#     filters = {"system": {"$eq": "metadata_list"}}
+#     for imem in answer_list:
+#         d, text = next(iter(imem.items()))
+#         print("\nЗапрос:", text)
+#         answer = embedding_db.get_notes(query_text=text,
+#                                         filter_metadata=filters, k=1, get_metadata=True)
+#         print(answer)
+#         for i in answer:
+#             print(f"Ответ {d}:", i)
+#
+#     print(f'---------------------{time.time() - start_time}----------------------\n')
 # -------------------------------------------------------------
 # за 3 часа мы проехали 20 киллометров со скоростью 3 киллометров в час и сделази 3 остановки последняя была на горке высотой 3 метра
 # на 3 полке в кладовке 5 банок варения 3 из них малиновое и 2 клубничных
@@ -76,12 +78,12 @@ while True:
 
 
     openai_client.load_prompt("query_parser")  # Загрузка промпта
-    openai_client.set_model("gpt-4.1-mini")
+    openai_client.set_model("gpt-4.1-mini")  #gpt-3.5-turbo gpt-4.1-mini
 
     user_message = user_input + f"\n\nИмеющиеся списки:\n{[list_name for list_name in user.lists]}\n\n"
 
     answer = openai_client.chat_sync(user_message)
-    openai_client.set_model("gpt-4.1")
+    openai_client.set_model("gpt-4.1-mini")
     print(answer)
     try:
         matadata = json.loads(answer)
@@ -118,3 +120,5 @@ while True:
         print("Ошибка обработки ответа модели", e)
 
     print(f'---------------------{time.time() - start_time}----------------------\n')
+
+# TG_TOKEN=7738326871:AAHjG_hZccBA_AmasUNsShmc36-VrBMY7cc

@@ -78,13 +78,12 @@ class EmbeddingDatabase:
         else:
             # Фильтрация по метаданным
             param = {"where": filter_metadata}
-            # param = {"include": ["ids", "metadatas", "documents"]}
             if word_for_search:
                 # Активация поиска документа по слову
                 param["where_document"] = word_for_search
             # print("filter_metadata", param)
             results = self.vector_store.get(**param)
-            # print("Результат сразу после запроса", results)
+            print("Результат сразу после запроса", results)
             # print(self.vector_store._collection.get(include=["embeddings", "documents", "metadatas"]))  # Показывает всю базу
             if not results["documents"]:
                 return []
@@ -135,7 +134,7 @@ class EmbeddingDatabase:
                     key, rest = line.split(":", 1)
                     chunks.append(Document(
                         page_content=rest.strip(),
-                        metadata={"system": "metadata_list"}
+                        metadata={"system": "metadata_list", "ids": key}
                     ))
                     metadata_names.append(key)
                 except ValueError:

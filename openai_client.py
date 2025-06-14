@@ -1,9 +1,12 @@
 import asyncio
+import time
+
 import openai
 from typing import Optional
 from datetime import datetime
 from langsmith import traceable
 from langsmith.wrappers import wrap_openai
+import threading
 
 
 class OpenAIClient:
@@ -123,3 +126,54 @@ class OpenAIClient:
             Optional[str]: Ответ от OpenAI, либо None в случае ошибки.
         """
         return await asyncio.to_thread(self.chat_sync, user_message)
+
+
+class WorkerThread(threading.Thread):
+    """
+    Поток для обработки запроса к OpenAI.
+
+    Args:
+        create_note (str): Название промпта для загрузки.
+        query (str): Запрос для OpenAI.
+        model (str): Название модели.
+
+
+    Attributes:
+        result (Optional[str]): Результат запроса после выполнения потока.
+    """
+
+    def __init__(self, api_key: str, prompt_name: str, query: str, model: str = "gpt-4.1-mini"):
+        super().__init__()
+        print("✅ Инициализация клиента OpenAI")
+        self.openai_client: OpenAIClient = OpenAIClient(api_key=api_key)  # Создаем объект
+        self.prompt_name: str = prompt_name
+        self.query: str = query
+        self.model = model
+        self.result: Optional[str] = None  # Здесь будет результат после выполнения
+
+    def run(self) -> None:
+        """Запускает обработку запроса в OpenAI и записывает результат."""
+        print("✅ Запуск потока")
+        start = time.time()
+        self.openai_client.load_prompt(self.prompt_name)  # Загружаем промпт
+        self.openai_client.set_model(self.model)
+        self.result = self.openai_client.chat_sync(" " + self.query)  # Получаем ответ
+        print("Запрос в потоке выполнялся", time.time() - start)
+
+# ✅ Запуск нескольких потоков и ожидание их завершения
+# openai_client = OpenAIClient()
+# requests = [
+#     ("create_note", "Первый запрос"),
+#     ("create_note", "Второй запрос"),
+# ]
+#
+# threads = [WorkerThread(openai_client, create_note, query) for create_note, query in requests]
+#
+# for thread in threads:
+#     thread.start()
+#
+# for thread in threads:
+#     thread.join()
+#
+# results = [thread.result for thread in threads]
+# print(results)  # ['Ответ 1', 'Ответ 2']

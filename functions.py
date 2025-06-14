@@ -6,7 +6,7 @@ from typing import Dict, List, Any, Union, Optional, Tuple
 from apscheduler.job import Job
 from ast import literal_eval
 from jobs import reminder_job
-from config import scheduler
+from config import scheduler, embedding_db
 from datetime import datetime, timezone
 from dateutil import parser
 
@@ -121,7 +121,7 @@ def register_job(job_id: str, message: str, job_dict: Dict) -> Job:
     return job
 
 
-def iso_timestamp_converter(value: Union[str, int]) -> Union[int, str]:
+def iso_timestamp_converter(value: Union[str, int, None]) -> Union[int, str]:
     """
     Конвертирует между ISO 8601 и UNIX timestamp в UTC.
 
@@ -132,6 +132,9 @@ def iso_timestamp_converter(value: Union[str, int]) -> Union[int, str]:
     :param value: str или int
     :return: int или str
     """
+    if value is None:
+        return 0
+
     if isinstance(value, str):
         dt = parser.isoparse(value)
         if dt.tzinfo is None:
@@ -143,8 +146,6 @@ def iso_timestamp_converter(value: Union[str, int]) -> Union[int, str]:
     elif isinstance(value, int):
         dt = datetime.fromtimestamp(value, timezone.utc)
         return dt.isoformat().replace('+00:00', 'Z')
-
-
     else:
         raise ValueError("Аргумент должен быть строкой ISO 8601 или целым числом (timestamp)")
 
@@ -179,3 +180,28 @@ def transform_filters(filters: list) -> list:
         transformed.append({field: value})
 
     return transformed
+
+
+def get_metadata_response_llm(response: str) -> List[Dict]:
+    """
+    :param response:
+    :return: List - список словарей с метаданными [{field_name: volume}, ...]
+    """
+    answer_list = extract_json_to_dict(response)  # Получаем ответ с метаданными от llm
+    filters = {"system": {"$eq": "metadata_list"}}
+    out = []
+    for imem in answer_list:
+        d, text = next(iter(imem.items()))  # Число и его категория (определенная ИИ)
+        # print("\nЗапрос:", d, text)
+        # Запрос к БД
+        answer = embedding_db.get_notes(query_text=text,
+                                        filter_metadata=filters, k=1, get_metadata=True)
+        # print("Выбрать отсюда:", answer)
+        # print(f'{answer[0]["metadata"]["ids"]} = {d}')
+        print("Из БД:", answer)
+        if not answer: continue
+        metadata_field = answer[0].get("metadata", {}).get("ids")  # Получаем название поля
+        if not metadata_field: continue
+        out.append({metadata_field: d})
+
+    return out
