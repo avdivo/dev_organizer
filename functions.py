@@ -187,7 +187,10 @@ def get_metadata_response_llm(response: str) -> List[Dict]:
     :param response:
     :return: List - список словарей с метаданными [{field_name: volume}, ...]
     """
-    answer_list = extract_json_to_dict(response)  # Получаем ответ с метаданными от llm
+    try:
+        answer_list = extract_json_to_dict(response)  # Получаем ответ с метаданными от llm
+    except:
+        return []
     filters = {"system": {"$eq": "metadata_list"}}
     out = []
     for imem in answer_list:
@@ -203,5 +206,32 @@ def get_metadata_response_llm(response: str) -> List[Dict]:
         metadata_field = answer[0].get("metadata", {}).get("ids")  # Получаем название поля
         if not metadata_field: continue
         out.append({metadata_field: d})
+
+    return out
+
+
+def get_filter_response_llm(response: str) -> List[Dict]:
+    """
+    :param response:
+    :return: List - список словарей с метаданными [{"рубль, валюта": {"$gt": 5}}, ...]
+    """
+    try:
+        answer_list = extract_json_to_dict(response)  # Получаем ответ с метаданными от llm
+    except:
+        return []
+    print(answer_list)
+    filters = {"system": {"$eq": "metadata_list"}}
+    out = []
+    for imem in answer_list:
+        text, f = next(iter(imem.items()))  # Категория (определенная ИИ) и фильтр
+
+        # Запрос к БД
+        answer = embedding_db.get_notes(query_text=text,
+                                        filter_metadata=filters, k=1, get_metadata=True)
+
+        if not answer: continue
+        metadata_field = answer[0].get("metadata", {}).get("ids")  # Получаем название поля
+        if not metadata_field: continue
+        out.append({metadata_field: f})
 
     return out

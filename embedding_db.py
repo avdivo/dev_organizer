@@ -58,7 +58,7 @@ class EmbeddingDatabase:
         :param word_for_search: слово или фраза для поиска документов
         :return: Список [{text: "...", metadata: {...}}] или [str]
         """
-        # print("Сейчас в базе", self.vector_store._collection.get())  # Показывает всю базу
+        print("Сейчас в базе", self.vector_store._collection.get())  # Показывает всю базу
 
         # Формируем словарь параметров запроса
         if query_text:
