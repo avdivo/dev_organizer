@@ -77,16 +77,18 @@ while True:
         break
 
 
-    openai_client.load_prompt("query_parser")  # Загрузка промпта
-    openai_client.set_model("gpt-4.1-mini")  #gpt-3.5-turbo gpt-4.1-mini
+    # openai_client.load_prompt("query_parser")  # Загрузка промпта
+    # openai_client.set_model("gpt-4.1-mini")  #gpt-3.5-turbo gpt-4.1-mini
+    #
+    # user_message = user_input + f"\n\nИмеющиеся списки:\n{[list_name for list_name in user.lists]}\n\n"
+    #
+    # answer = openai_client.chat_sync(user_message)
+    # openai_client.set_model("gpt-4.1-mini")
+    # print(answer)
 
-    user_message = user_input + f"\n\nИмеющиеся списки:\n{[list_name for list_name in user.lists]}\n\n"
-
-    answer = openai_client.chat_sync(user_message)
-    openai_client.set_model("gpt-4.1-mini")
-    print(answer)
     try:
-        matadata = json.loads(answer)
+        matadata = {'action': 'create_note', 'list_name': 'заметка', 'query': user_input}
+        # matadata = json.loads(answer)
         action = matadata.get("action")
 
         # ----------------------------- Создание списка -----------------------------

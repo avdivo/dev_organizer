@@ -235,3 +235,26 @@ def get_filter_response_llm(response: str) -> List[Dict]:
         out.append({metadata_field: f})
 
     return out
+
+
+def simplify_notes_for_llm(raw_notes: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """
+    Преобразует список заметок в упрощённый формат, удобный для обработки моделью.
+
+    Оставляет только поля: "datetime_create", "text", "list_name", "completed", "datetime_reminder".
+    Все поля извлекаются через .get(), чтобы избежать KeyError при отсутствии.
+
+    :param raw_notes: Список заметок в исходной вложенной структуре
+    :return: Список заметок в упрощённом виде
+    """
+    simplified = []
+    for item in raw_notes:
+        metadata = item.get("metadata", {})
+        simplified.append({
+            "datetime_create": metadata.get("datetime_create"),
+            "text": metadata.get("text"),
+            "list_name": metadata.get("list_name"),
+            "completed": metadata.get("completed"),
+            "datetime_reminder": metadata.get("datetime_reminder")  # может быть None
+        })
+    return simplified

@@ -38,17 +38,20 @@ def create_note(answer: dict) -> bool:
     # промпт для нахождения метаданных в тексте
     is_metadata = True if bool(re.search(r'\d', query)) else False
 
-    if is_metadata:
-        # В потоке запускаем поиск метаданных в запросе
-        print("Запуск в потоке:", time.time() - start)
-        thread = WorkerThread(api_key=OPENAI_API_KEY, prompt_name="get_metadata", query=query, model="gpt-4.1-mini")
-        thread.start()
-        print("Сразу после запуска в потоке:", time.time() - start)
+    # if is_metadata:
+    #     # В потоке запускаем поиск метаданных в запросе
+    #     print("Запуск в потоке:", time.time() - start)
+    #     thread = WorkerThread(api_key=OPENAI_API_KEY, prompt_name="get_metadata", query=query, model="gpt-4.1-mini")
+    #     thread.start()
+    #     print("Сразу после запуска в потоке:", time.time() - start)
     # Разбираем основной запрос, выбираем из него метаданные
     print("Запуск основного запроса:", time.time() - start)
     openai_client.load_prompt("create_note")  # Загрузка промпта
     openai_client.set_model("gpt-4.1")  # gpt-4.1-mini
     answer = openai_client.chat_sync(" " + query)
+
+    print(answer)
+
 
     if not answer:
         return False
@@ -60,8 +63,12 @@ def create_note(answer: dict) -> bool:
     except:
         return False
 
+    return False
+
     if is_metadata:
-        thread.join()  # Ожидаем завершения потока с поиском метаданных
+    #     thread.join()  # Ожидаем завершения потока с поиском метаданных
+    #     print(thread.result)
+
         print("После ожидания выполнения потока:", time.time() - start)
         # Разбираем запрос метаданными и объединяем его с основным
         metadata_llm = get_metadata_response_llm(thread.result)  # Получаем список дополнительных метаданных

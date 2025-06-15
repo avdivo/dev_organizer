@@ -58,15 +58,24 @@ class EmbeddingDatabase:
         :param word_for_search: слово или фраза для поиска документов
         :return: Список [{text: "...", metadata: {...}}] или [str]
         """
-        print("Сейчас в базе", self.vector_store._collection.get())  # Показывает всю базу
+
+        # Выводит все записи из базы
+        results = self.vector_store._collection.get(where={"user": {"$eq": "1"}})
+        for i in range(len(results["ids"])):
+            print(f"ID: {results['ids'][i]}")
+            print(f"Metadata: {results['metadatas'][i]}")
+            print(f"Document: {results['documents'][i]}")
+            print("-" * 40)
 
         # Формируем словарь параметров запроса
         if query_text:
             # Поиск похожих записей по эмбеддингам и возможно метаданным
             # results = self.vector_store.similarity_search(query=query_text, k=k, filter=filter_metadata)
-            # print("filter_metadata", filter_metadata)
+            print("-" * 40)
+            print(f"Запрос:\n Строка для поиска: {query_text} Фильры: filter_metadata\n")
             results = self.vector_store.similarity_search(query=query_text, k=k, filter=filter_metadata)
-            # print("results", results)
+            print("Результат семантического запроса", results)
+            print("-" * 40)
             if not results:
                 return []
             if get_metadata:
@@ -81,10 +90,11 @@ class EmbeddingDatabase:
             if word_for_search:
                 # Активация поиска документа по слову
                 param["where_document"] = word_for_search
-            # print("filter_metadata", param)
+            print("-" * 40)
+            print(f"Запрос:\n {param}\n")
             results = self.vector_store.get(**param)
-            print("Результат сразу после запроса", results)
-            # print(self.vector_store._collection.get(include=["embeddings", "documents", "metadatas"]))  # Показывает всю базу
+            print("Результат фильтра", results)
+            print("-" * 40)
             if not results["documents"]:
                 return []
             if get_metadata:
