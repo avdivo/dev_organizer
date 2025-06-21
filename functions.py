@@ -134,20 +134,22 @@ def iso_timestamp_converter(value: Union[str, int, None]) -> Union[int, str]:
     """
     if value is None:
         return 0
+    try:
+        if isinstance(value, str):
+            dt = parser.isoparse(value)
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=timezone.utc)
+            else:
+                dt = dt.astimezone(timezone.utc)
+            return int(dt.timestamp())
 
-    if isinstance(value, str):
-        dt = parser.isoparse(value)
-        if dt.tzinfo is None:
-            dt = dt.replace(tzinfo=timezone.utc)
+        elif isinstance(value, int):
+            dt = datetime.fromtimestamp(value, timezone.utc)
+            return dt.isoformat().replace('+00:00', 'Z')
         else:
-            dt = dt.astimezone(timezone.utc)
-        return int(dt.timestamp())
-
-    elif isinstance(value, int):
-        dt = datetime.fromtimestamp(value, timezone.utc)
-        return dt.isoformat().replace('+00:00', 'Z')
-    else:
-        raise ValueError("Аргумент должен быть строкой ISO 8601 или целым числом (timestamp)")
+            raise
+    except:
+        return 0
 
 
 def transform_filters(filters: list) -> list:
@@ -182,30 +184,38 @@ def transform_filters(filters: list) -> list:
     return transformed
 
 
-def get_metadata_response_llm(response: str) -> List[Dict]:
+def get_metadata_response_llm(metadata: List[Dict]) -> Dict:
     """
-    :param response:
-    :return: List - список словарей с метаданными [{field_name: volume}, ...]
+    Получает метаданные из ответа модели при создании заметок (числительные).
+    Стандартизирует их и проверяет данные на числа.
+
+    :param metadata: [{(int/float): ед. измерения}, ...]
+    :return: Dict - словарь с метаданными {field_name: volume}
     """
-    try:
-        answer_list = extract_json_to_dict(response)  # Получаем ответ с метаданными от llm
-    except:
-        return []
     filters = {"system": {"$eq": "metadata_list"}}
-    out = []
-    for imem in answer_list:
-        d, text = next(iter(imem.items()))  # Число и его категория (определенная ИИ)
-        # print("\nЗапрос:", d, text)
+    out = {}
+    for imem in metadata:
+        d, text = next(iter(imem.items()))  # Число и его ед. измерения
+
+        # Переводим в число из строки или оставляем числом
+        number = None
+        if isinstance(d, str):  # Строка
+            try:
+                number = int(d) if d.isdigit() else float(d)
+            except ValueError:
+                pass
+        elif isinstance(d, (int, float)):  # Число
+            number = d
+        if not number:
+            continue
+
         # Запрос к БД
         answer = embedding_db.get_notes(query_text=text,
                                         filter_metadata=filters, k=1, get_metadata=True)
-        # print("Выбрать отсюда:", answer)
-        # print(f'{answer[0]["metadata"]["ids"]} = {d}')
-        print("Из БД:", answer)
         if not answer: continue
         metadata_field = answer[0].get("metadata", {}).get("ids")  # Получаем название поля
         if not metadata_field: continue
-        out.append({metadata_field: d})
+        out[metadata_field] = number
 
     return out
 

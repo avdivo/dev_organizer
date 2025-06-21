@@ -1,12 +1,12 @@
-import asyncio
 import time
-
 import openai
+import asyncio
+import threading
 from typing import Optional
-from datetime import datetime
 from langsmith import traceable
 from langsmith.wrappers import wrap_openai
-import threading
+
+from services import get_current_time_and_weekday
 
 
 class OpenAIClient:
@@ -38,16 +38,6 @@ class OpenAIClient:
         # self.client = openai.OpenAI(api_key=api_key)
         self.client = wrap_openai(openai.OpenAI(api_key=api_key))
 
-        # Словарь с русскими названиями дней недели
-        self.days_of_week_ru = {
-            0: 'Пн',  # Понедельник
-            1: 'Вт',  # Вторник
-            2: 'Ср',  # Среда
-            3: 'Чт',  # Четверг
-            4: 'Пт',  # Пятница
-            5: 'Сб',  # Суббота
-            6: 'Вс'  # Воскресенье
-        }
 
     def set_model(self, model_name: str) -> None:
         """
@@ -66,13 +56,7 @@ class OpenAIClient:
             query_prompt (str): имя файла который содержит промпты для запроса.
         """
         # Получение сегодняшней даты и времени
-        now = datetime.now()
-        # Форматирование даты в формат dd.mm.yyyy
-        date = now.strftime("%d.%m.%Y")
-        # Форматирование времени в формат HH:MM:SS
-        time = now.strftime("%H:%M:%S")
-        # Получение дня недели (0 - понедельник, 6 - воскресенье)
-        weekday = now.weekday()
+        iso_time, weekday_name = get_current_time_and_weekday()
 
         """Читает файл и разделяет system и user промпты."""
         with open("prompts/" + query_prompt + ".txt", "r", encoding="utf-8") as f:
@@ -81,7 +65,12 @@ class OpenAIClient:
             self.system_prompt = content[0].replace("SYSTEM:\n", "").strip()
 
             # Добавляем дату и время
-            self.user_base_prompt = f"Сейчас: {date} {time} {self.days_of_week_ru[weekday]}\n"
+            self.user_base_prompt = f"Сейчас: {iso_time} {weekday_name}\n"
+            self.user_base_prompt += ("ПРАВМЛА для ДАТ:\nДаты в текстах пиши: день месяц (словом) год (или без года если понятно по контексту)\n"
+                                      "Время в текстах пиши: hh часов mm минут, "
+                                      "или разговорным при ровных минутах, где это уместно: половина восьмого, без десяти два.\n"
+                                      "остальные числительные пиши строго цифрами.\n"
+                                      "В JSON полях дату и время указывай в ISO 8601.\n\n")
             self.user_base_prompt += content[1].replace("USER:\n", "").strip()
 
         # Добавляем метаданные

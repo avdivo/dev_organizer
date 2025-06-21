@@ -4,7 +4,7 @@ import time
 from user import user
 from config import embedding_db, openai_client, DEFAULT_LIST, OPENAI_API_KEY
 from functions import extract_json_to_dict, iso_timestamp_converter, get_metadata_response_llm
-from openai_client import WorkerThread
+from services import get_current_time_and_weekday
 
 
 def create_note(answer: dict) -> bool:
@@ -34,77 +34,52 @@ def create_note(answer: dict) -> bool:
 
     print("Обработка в llm запросов на добавление заметок")
     start = time.time()
-    # Определяем наличие в тексте цифр и если они есть, запускаем параллельно
-    # промпт для нахождения метаданных в тексте
-    is_metadata = True if bool(re.search(r'\d', query)) else False
 
-    # if is_metadata:
-    #     # В потоке запускаем поиск метаданных в запросе
-    #     print("Запуск в потоке:", time.time() - start)
-    #     thread = WorkerThread(api_key=OPENAI_API_KEY, prompt_name="get_metadata", query=query, model="gpt-4.1-mini")
-    #     thread.start()
-    #     print("Сразу после запуска в потоке:", time.time() - start)
-    # Разбираем основной запрос, выбираем из него метаданные
     print("Запуск основного запроса:", time.time() - start)
     openai_client.load_prompt("create_note")  # Загрузка промпта
     openai_client.set_model("gpt-4.1")  # gpt-4.1-mini
     answer = openai_client.chat_sync(" " + query)
-
-    print(answer)
-
+    print("Ответ LLM:\n", answer)
 
     if not answer:
         return False
 
     try:
-        answer_list = extract_json_to_dict(answer)  # Преобразуем ответ в list
-        print("Основной ответ:", answer_list)
+        notes = extract_json_to_dict(answer)  # Преобразуем ответ в list
+        if not notes:
+            raise
+        print("Основной ответ:", notes)
         print("Сразу после отработки основного запроса:", time.time() - start)
     except:
         return False
-
-    return False
-
-    if is_metadata:
-    #     thread.join()  # Ожидаем завершения потока с поиском метаданных
-    #     print(thread.result)
-
-        print("После ожидания выполнения потока:", time.time() - start)
-        # Разбираем запрос метаданными и объединяем его с основным
-        metadata_llm = get_metadata_response_llm(thread.result)  # Получаем список дополнительных метаданных
-    else:
-        metadata_llm = []
-
-    # Сохраняем заметку
-    numbers = answer_list.get("numbers", [])  # Получаем список номеров числительных в тексте
-    metadatas = answer_list.get("data", [])  # Список заметок
-    numbers_in_metadata = [list(v.values())[0] for v in metadata_llm]  # Список номеров числительных в метаданных
 
     # Добавляем метаданные в заметки
     print("Перед добавлением метаданных:", time.time() - start)
     documents = []
     metadatas_new = []
-    for metadata in metadatas:
-        if not metadata:
+    for note in notes:
+        if not note:
             continue
-        indexes = metadata.pop("numbers", [])  # Забираем индексы чисел из списка которые есть в этой заметке
+
+        # Подготовка метаданных
+        datetime_create = note.get("datetime_create", get_current_time_and_weekday(0))  # Дата создания
+        timestamp_create = iso_timestamp_converter(datetime_create)  # Пытаемся преобразовать
+        if not timestamp_create:
+            # LLM может не правильно создать дату
+            datetime_create = get_current_time_and_weekday(0)
+            timestamp_create = iso_timestamp_converter(datetime_create)
+        metadata = dict(datetime_create = datetime_create, timestamp_create=timestamp_create)
+
+        metadata["user"] = str(user.id)  # Добавляем пользователя
         metadata["list_name"] = list_name  # Добавляем название списка
         metadata["completed"] = False  # Добавляем признак удаления
-        text = metadata["text"] if metadata.get("text", "") else query  # Документ заменяем на text от модели
-        documents.append(text)
-        metadata["timestamp_create"] = iso_timestamp_converter(metadata.get("datetime_create", None))  # timestamp даты
-        metadata["user"] = str(user.id)  # Добавляем пользователя
-
-        # Проверяем числа на наличие категорий и добавляем в заметку как метаданные
-        for index in indexes:
-            try:
-                number = numbers[index]  # Получаем число
-                if number == numbers_in_metadata[index]:
-                    metadata.update(metadata_llm[index])  # Добавляем дополнительные метаданные
-            except:
-                continue
-
+        metadata.update(get_metadata_response_llm(note.get("numbers", {})))  # Метаданные от LLM
         metadatas_new.append(metadata)
+
+        # Подготовка текстовой части (документа)
+        text = note["text"] if note.get("text", "") else query  # Документ заменяем на text от модели
+        documents.append(text)
+
     embedding_db.add_text(documents, metadatas_new)  # Добавляем заметки в базу
     print("Документы:", documents)
     print("Метаданные:", metadatas_new)
