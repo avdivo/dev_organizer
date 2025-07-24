@@ -1,47 +1,64 @@
+import os
 import time
 import openai
 import asyncio
 import threading
 from typing import Optional
+from dotenv import load_dotenv
 from langsmith import traceable
 from langsmith.wrappers import wrap_openai
 
 from services import get_current_time_and_weekday
 
+# Выбор провайдера модели
+# Загрузка переменных окружения
+load_dotenv()
 
-class OpenAIClient:
+# PROVIDER_URL = "https://api.openai.com/v1"
+# key_name = "OPENAI_API_KEY"
+PROVIDER_URL = "https://api.cometapi.com/v1"
+key_name = "COMETAPI_KEY"
+MODEL_PROVIDER_KEY = os.getenv(key_name)
+
+class AIClient:
     """
-    Асинхронный клиент для работы с OpenAI API.
+    Асинхронный клиент для работы с провайдером модели через API.
 
     Позволяет:
-    - Менять модель OpenAI (например, "gpt-4", "gpt-3.5-turbo").
+    - Менять модель (например, "gpt-4", "gpt-3.5-turbo").
     - Настраивать системный промпт.
-    - Выполнять запросы к OpenAI API асинхронно, чтобы не блокировать FastAPI.
+    - Выполнять запросы к API асинхронно, чтобы не блокировать FastAPI.
 
     Атрибуты:
-        api_key (str): API-ключ для доступа к OpenAI.
         model (str): Текущая используемая модель (по умолчанию "gpt-4").
         system_prompt (str): Системный промпт, задающий контекст чата.
     """
 
-    def __init__(self, api_key: str, model: str = "gpt-4.1-mini"):
+    def __init__(self, model: str = "gpt-4.1-mini"):
         """
         Инициализация OpenAI клиента.
 
         Args:
-            api_key (str): API-ключ OpenAI.
             model (str, optional): Название модели (по умолчанию "gpt-4.1").
         """
         self.model = model
         self.system_prompt = ""
         self.user_base_prompt = ""
         # self.client = openai.OpenAI(api_key=api_key)
-        self.client = wrap_openai(openai.OpenAI(api_key=api_key))
+        # self.client = wrap_openai(openai.OpenAI(api_key=api_key))
 
+        # Создаём клиент с указанием CometAPI
+        raw_client = openai.OpenAI(
+            api_key = MODEL_PROVIDER_KEY,
+            base_url = PROVIDER_URL
+        )
+
+        # Оборачиваем его для трассировки через LangSmith
+        self.client = wrap_openai(raw_client)
 
     def set_model(self, model_name: str) -> None:
         """
-        Изменяет используемую модель OpenAI.
+        Изменяет используемую модель.
 
         Args:
             model_name (str): Название новой модели (например, "gpt-3.5-turbo").
@@ -119,11 +136,11 @@ class OpenAIClient:
 
 class WorkerThread(threading.Thread):
     """
-    Поток для обработки запроса к OpenAI.
+    Поток для обработки запроса к модели.
 
     Args:
         create_note (str): Название промпта для загрузки.
-        query (str): Запрос для OpenAI.
+        query (str): Запрос для модели.
         model (str): Название модели.
 
 
@@ -131,10 +148,10 @@ class WorkerThread(threading.Thread):
         result (Optional[str]): Результат запроса после выполнения потока.
     """
 
-    def __init__(self, api_key: str, prompt_name: str, query: str, model: str = "gpt-4.1-mini"):
+    def __init__(self, prompt_name: str, query: str, model: str = "gpt-4.1-mini"):
         super().__init__()
-        print("✅ Инициализация клиента OpenAI")
-        self.openai_client: OpenAIClient = OpenAIClient(api_key=api_key)  # Создаем объект
+        print("✅ Инициализация клиента провайдера модели")
+        self.openai_client: AIClient = AIClient()  # Создаем объект
         self.prompt_name: str = prompt_name
         self.query: str = query
         self.model = model

@@ -1,9 +1,9 @@
 import re
 import time
 
-from openai_client import WorkerThread
+from provider_client import WorkerThread
 from user import user
-from config import embedding_db, openai_client, OPENAI_API_KEY
+from config import embedding_db, provider_client
 from functions import (extract_json_to_dict, transform_filters,
                        get_filter_response_llm, simplify_notes_for_llm)
 
@@ -36,14 +36,14 @@ def search(answer: dict, question: str = "") -> str:
     if is_metadata:
         # В потоке запускаем поиск метаданных в запросе
         print("Запуск в потоке:", time.time() - start)
-        thread = WorkerThread(api_key=OPENAI_API_KEY, prompt_name="search_filter", query=query, model="gpt-4.1-mini")
+        thread = WorkerThread(prompt_name="search_filter", query=query, model="gpt-4.1-mini")
         thread.start()
         print("Сразу после запуска в потоке:", time.time() - start)
 
     # Запрос к LLM
-    openai_client.load_prompt("search")  # Загрузка промпта
-    openai_client.set_model("gpt-4.1")  # gpt-4.1-mini
-    answer = openai_client.chat_sync(" " + query)
+    provider_client.load_prompt("search")  # Загрузка промпта
+    provider_client.set_model("gpt-4.1")  # gpt-4.1-mini
+    answer = provider_client.chat_sync(" " + query)
     if not answer:
         return "Задание провалено, ИИ не ответил. Повторите запрос."
 
@@ -94,9 +94,9 @@ def search(answer: dict, question: str = "") -> str:
         simplify_answer = simplify_notes_for_llm(answer)
 
         # Запрос к модели
-        openai_client.load_prompt("simple_answer")  # Загрузка промпта
-        openai_client.set_model("gpt-4.1-nano")  # gpt-4.1-mini
-        answer = openai_client.chat_sync(f"\n{simplify_answer}\n\nВопрос: {question}")
+        provider_client.load_prompt("simple_answer")  # Загрузка промпта
+        provider_client.set_model("gpt-4.1-nano")  # gpt-4.1-mini
+        answer = provider_client.chat_sync(f"\n{simplify_answer}\n\nВопрос: {question}")
 
         return answer
 
@@ -113,14 +113,14 @@ def search(answer: dict, question: str = "") -> str:
 
         # Запрос к LLM
         if search == "llm_smart":
-            openai_client.load_prompt("semantic")  # Загрузка промпта
-            openai_client.set_model("gpt-4.1-mini")  # gpt-4.1-mini
+            provider_client.load_prompt("semantic")  # Загрузка промпта
+            provider_client.set_model("gpt-4.1-mini")  # gpt-4.1-mini
         else:
-            openai_client.load_prompt("simple_answer")  # Загрузка промпта
-            openai_client.set_model("gpt-4.1-nano")  # gpt-4.1-mini
+            provider_client.load_prompt("simple_answer")  # Загрузка промпта
+            provider_client.set_model("gpt-4.1-nano")  # gpt-4.1-mini
 
         simplify_answer = simplify_notes_for_llm(answer)
-        answer = openai_client.chat_sync(f"\n{simplify_answer}\n\nВопрос: {question}")
+        answer = provider_client.chat_sync(f"\n{simplify_answer}\n\nВопрос: {question}")
 
         try:
             out = eval("f'" + answer + "'")

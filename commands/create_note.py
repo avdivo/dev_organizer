@@ -2,7 +2,7 @@ import re
 import time
 
 from user import user
-from config import embedding_db, openai_client, DEFAULT_LIST, OPENAI_API_KEY
+from config import embedding_db, provider_client, DEFAULT_LIST
 from functions import extract_json_to_dict, iso_timestamp_converter, get_metadata_response_llm
 from services import get_current_time_and_weekday
 
@@ -36,9 +36,9 @@ def create_note(answer: dict) -> bool:
     start = time.time()
 
     print("Запуск основного запроса:", time.time() - start)
-    openai_client.load_prompt("create_note")  # Загрузка промпта
-    openai_client.set_model("gpt-4.1")  # gpt-4.1-mini
-    answer = openai_client.chat_sync(" " + query)
+    provider_client.load_prompt("create_note")  # Загрузка промпта
+    provider_client.set_model("gpt-4.1")  # gpt-4.1-mini
+    answer = provider_client.chat_sync(" " + query)
     print("Ответ LLM:\n", answer)
 
     if not answer:

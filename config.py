@@ -6,14 +6,13 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.jobstores.sqlalchemy import SQLAlchemyJobStore
 
 from sql_db import SQLiteClient
-from openai_client import OpenAIClient
+from provider_client import AIClient
 from embedding_db import EmbeddingDatabase
 from create_tables import SQLiteTableCreator
 
 # Загрузка переменных окружения
 load_dotenv()
 
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 LANGSMITH_API_KEY = os.getenv("LANGSMITH_API_KEY")
 TG_TOKEN = os.getenv("TG_TOKEN")
 PERSIST_DIRECTORY = "./chroma_db"
@@ -27,11 +26,10 @@ print("✅ Инициализация БД и модели эмбеддинго�
 embedding_db = EmbeddingDatabase(persist_directory=PERSIST_DIRECTORY, model_name=MODEL_NAME)
 
 # Инициализация LLM
-# llm = ChatOpenAI(model="gpt-3.5-turbo", api_key=API_KEY)
-llm = ChatOpenAI(model="gpt-4.1-nano", api_key=OPENAI_API_KEY)
+# llm = ChatOpenAI(model="gpt-4.1-nano", api_key=COMETAPI_KEY)
 
-print("✅ Инициализация клиента OpenAI")
-openai_client = OpenAIClient(api_key=OPENAI_API_KEY)
+print("✅ Инициализация клиента модели")
+provider_client = AIClient()
 
 # Путь к дополнительной базе данных SQLite
 db_path = "database.sqlite"

@@ -2,7 +2,7 @@ import re
 import time
 
 from user import user
-from config import embedding_db, openai_client, DEFAULT_LIST, OPENAI_API_KEY
+from config import embedding_db, provider_client, DEFAULT_LIST
 from functions import (extract_json_to_dict, generate_job_id,
                        register_job, iso_timestamp_converter, get_metadata_response_llm)
 from services import get_current_time_and_weekday
@@ -37,9 +37,9 @@ def create_reminder(answer: dict) -> str:
     start = time.time()
 
     # Разбираем запрос, выбираем из него метаданные
-    openai_client.load_prompt("create_reminder")  # Загрузка промпта
-    openai_client.set_model("gpt-4.1")  # gpt-4.1-mini
-    answer = openai_client.chat_sync(" " + query)
+    provider_client.load_prompt("create_reminder")  # Загрузка промпта
+    provider_client.set_model("gpt-4.1")  # gpt-4.1-mini
+    answer = provider_client.chat_sync(" " + query)
     if not answer:
         return "Задание провалено, ИИ соврал. Повторите запрос."
 
