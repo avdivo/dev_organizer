@@ -38,7 +38,7 @@ def create_note(answer: dict) -> bool:
     print("Запуск основного запроса:", time.time() - start)
     provider_client.load_prompt("create_note")  # Загрузка промпта
     provider_client.set_model("gpt-4.1")  # gpt-4.1-mini
-    answer = provider_client.chat_sync(" " + query)
+    answer = provider_client.chat_sync(" " + query, addition=f"Имеются списки:\n{user.get_list_str()}")
     print("Ответ LLM:\n", answer)
 
     if not answer:

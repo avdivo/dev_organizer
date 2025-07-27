@@ -20,6 +20,7 @@ PROVIDER_URL = "https://api.cometapi.com/v1"
 key_name = "COMETAPI_KEY"
 MODEL_PROVIDER_KEY = os.getenv(key_name)
 
+
 class AIClient:
     """
     Асинхронный клиент для работы с провайдером модели через API.
@@ -49,8 +50,8 @@ class AIClient:
 
         # Создаём клиент с указанием CometAPI
         raw_client = openai.OpenAI(
-            api_key = MODEL_PROVIDER_KEY,
-            base_url = PROVIDER_URL
+            api_key=MODEL_PROVIDER_KEY,
+            base_url=PROVIDER_URL
         )
 
         # Оборачиваем его для трассировки через LangSmith
@@ -82,12 +83,14 @@ class AIClient:
             self.system_prompt = content[0].replace("SYSTEM:\n", "").strip()
 
             # Добавляем дату и время
-            self.user_base_prompt = f"Сейчас: {iso_time} {weekday_name}\n"
-            self.user_base_prompt += ("ПРАВМЛА для ДАТ:\nДаты в текстах пиши: день месяц (словом) год (или без года если понятно по контексту)\n"
-                                      "Время в текстах пиши: hh часов mm минут, "
-                                      "или разговорным при ровных минутах, где это уместно: половина восьмого, без десяти два.\n"
-                                      "остальные числительные пиши строго цифрами.\n"
-                                      "В JSON полях дату и время указывай в ISO 8601.\n\n")
+            self.user_base_prompt = f"Сейчас: {iso_time} {weekday_name}\n\n"
+            self.user_base_prompt += (
+                "ПРАВИЛА для ДАТ:\nДату, указания на дату (например вчера, сегодня, через полчаса и др) переводи в даты."
+                "Даты в текстах пиши: день месяц (словом) год (или без года если понятно по контексту)\n"
+                "Время в текстах пиши: hh часов mm минут, "
+                "или разговорным при ровных минутах, где это уместно: половина восьмого, без десяти два.\n"
+                "остальные числительные пиши строго цифрами.\n"
+                "В JSON полях дату и время указывай в ISO 8601.\n\n")
             self.user_base_prompt += content[1].replace("USER:\n", "").strip()
 
         # Добавляем метаданные
@@ -98,13 +101,13 @@ class AIClient:
         self.user_base_prompt = self.user_base_prompt.replace("<metadata list>", metadata_list)
 
     @traceable
-    def chat_sync(self, user_message: str) -> Optional[str]:
+    def chat_sync(self, user_message: str, addition: str = "") -> Optional[str]:
         """
         Синхронный вызов OpenAI API.
 
         Args:
             user_message (str): Текст пользовательского сообщения.
-
+            addition (str): Динамические дополнения записываются вначале
         Returns:
             Optional[str]: Ответ от OpenAI, либо None в случае ошибки.
         """
@@ -113,7 +116,7 @@ class AIClient:
                 model=self.model,
                 messages=[
                     {"role": "system", "content": self.system_prompt},
-                    {"role": "user", "content": self.user_base_prompt + user_message}
+                    {"role": "user", "content": f"{addition}\n\n{self.user_base_prompt}\n{user_message}"}
                 ]
             )
             return response.choices[0].message.content

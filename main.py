@@ -80,9 +80,9 @@ while True:
     provider_client.load_prompt("query_parser")  # Загрузка промпта
     provider_client.set_model("gpt-4.1-mini")  #gpt-3.5-turbo gpt-4.1-mini
 
-    user_message = user_input + f"\n\nИмеющиеся списки:\n{[list_name for list_name in user.lists]}\n\n"
+    user_message = user_input
 
-    answer = provider_client.chat_sync(user_message)
+    answer = provider_client.chat_sync(user_message, addition=f"Имеются списки:\n{user.get_list_str()}")
     provider_client.set_model("gpt-4.1-mini")
     print(answer)
 

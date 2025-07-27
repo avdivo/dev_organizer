@@ -43,7 +43,7 @@ def search(answer: dict, question: str = "") -> str:
     # Запрос к LLM
     provider_client.load_prompt("search")  # Загрузка промпта
     provider_client.set_model("gpt-4.1")  # gpt-4.1-mini
-    answer = provider_client.chat_sync(" " + query)
+    answer = provider_client.chat_sync(" " + query, addition=f"Имеются списки:\n{user.get_list_str()}")
     if not answer:
         return "Задание провалено, ИИ не ответил. Повторите запрос."
 
@@ -87,7 +87,7 @@ def search(answer: dict, question: str = "") -> str:
 
     print("Фильтры\n", filters, "\n")
 
-    if search == "semantic_and_llm" :
+    if search == "semantic" :
         essence = answer_dict.get("essence", question)  # Суть поисковой фразы
         # Поиск по смыслу с фильтрами
         answer = embedding_db.get_notes(query_text=essence, filter_metadata=filters, get_metadata=True)
@@ -96,7 +96,7 @@ def search(answer: dict, question: str = "") -> str:
         # Запрос к модели
         provider_client.load_prompt("simple_answer")  # Загрузка промпта
         provider_client.set_model("gpt-4.1-nano")  # gpt-4.1-mini
-        answer = provider_client.chat_sync(f"\n{simplify_answer}\n\nВопрос: {question}")
+        answer = provider_client.chat_sync(f"\n{simplify_answer}\n\nВопрос: {question}", addition=f"Имеются списки:\n{user.get_list_str()}")
 
         return answer
 
@@ -120,15 +120,10 @@ def search(answer: dict, question: str = "") -> str:
             provider_client.set_model("gpt-4.1-nano")  # gpt-4.1-mini
 
         simplify_answer = simplify_notes_for_llm(answer)
-        answer = provider_client.chat_sync(f"\n{simplify_answer}\n\nВопрос: {question}")
+        answer = provider_client.chat_sync(f"\n{simplify_answer}\n\nВопрос: {question}", addition=f"Имеются списки:\n{user.get_list_str()}")
 
         try:
             out = eval("f'" + answer + "'")
         except:
             out = "Задание провалено, ошибка модели. Повторите запрос.\n" + answer
         return out
-
-
-
-
-

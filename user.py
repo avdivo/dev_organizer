@@ -2,6 +2,7 @@ from typing import Optional, Dict, Any
 from config import sql_db  # Импорт клиента БД
 from errors import UserNotFoundError
 
+
 class User:
     """
     Класс, представляющий пользователя в системе.
@@ -56,7 +57,15 @@ class User:
         user_data = self.db_client.execute_sync(check_query, (telegram_id, alice_id))[0]
         self.fill_data(user_data)
 
-    async def add_user_async(self, name: str, telegram_id: Optional[str] = None, alice_id: Optional[str] = None) -> None:
+    def get_list_str(self):
+        """
+        Возвращает список списков пользователя строкой
+        :return: str
+        """
+        return list(self.lists.keys())
+
+    async def add_user_async(self, name: str, telegram_id: Optional[str] = None,
+                             alice_id: Optional[str] = None) -> None:
         """
         Асинхронно добавляет нового пользователя в базу данных.
         Если пользователь уже существует, загружает его данные.
@@ -155,6 +164,7 @@ class User:
         self.telegram_id = data["telegram_id"]
         self.alice_id = data["alice_id"]
         self.created_at = data["created_at"]
+
 
 # Создаём пустой объект пользователя
 user = User()

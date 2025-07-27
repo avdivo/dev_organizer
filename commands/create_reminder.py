@@ -85,6 +85,7 @@ def create_reminder(answer: dict) -> str:
         try:
             job_id = generate_job_id()  # Генерируем уникальный идентификатор задания
             metadata["job_id"] = job_id  # Записываем идентификатор в метаданные
+            print(job_id, text, job)
             register_job(job_id, text, job)  # Ставим задачу напоминание
             message_to_user.append(answer)
         except:
