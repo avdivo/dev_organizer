@@ -63,14 +63,14 @@ def create_reminder(answer: dict) -> str:
         job = reminder.get("APScheduler", None)  # Задания для планировщика
         answer = reminder.get("answer", "Напоминание сохранено")  # Ответ пользователю
         if not data or not job: continue
-
         # Подготовка текстовой части (документа)
         text = data["text"] if data.get("text", "") else query  # Документ заменяем на text от модели
 
         # Подготовка метаданных
-        date_reminder = data.get("date_reminder", None)  # Дата напоминания
+        date_reminder = data.get("datetime_reminder", None)  # Дата напоминания
         timestamp_reminder = iso_timestamp_converter(date_reminder)  # Пытаемся преобразовать
-        if not timestamp_reminder: continue
+        if not timestamp_reminder:
+            continue
         metadata = dict(date_reminder = date_reminder, timestamp_reminder=timestamp_reminder)
 
         datetime_create = data.get("datetime_create", get_current_time_and_weekday(0))  # Дата создания
@@ -85,7 +85,6 @@ def create_reminder(answer: dict) -> str:
         try:
             job_id = generate_job_id()  # Генерируем уникальный идентификатор задания
             metadata["job_id"] = job_id  # Записываем идентификатор в метаданные
-            print(job_id, text, job)
             register_job(job_id, text, job)  # Ставим задачу напоминание
             message_to_user.append(answer)
         except:

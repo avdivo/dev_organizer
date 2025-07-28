@@ -91,12 +91,12 @@ def search(answer: dict, question: str = "") -> str:
         essence = answer_dict.get("essence", question)  # Суть поисковой фразы
         # Поиск по смыслу с фильтрами
         answer = embedding_db.get_notes(query_text=essence, filter_metadata=filters, get_metadata=True)
-        simplify_answer = simplify_notes_for_llm(answer)
+        print('==================+++++++++++++++++++++++--------------------------\n', answer)
 
         # Запрос к модели
-        provider_client.load_prompt("simple_answer")  # Загрузка промпта
+        provider_client.load_prompt("semantic")  # Загрузка промпта
         provider_client.set_model("gpt-4.1-nano")  # gpt-4.1-mini
-        answer = provider_client.chat_sync(f"\n{simplify_answer}\n\nВопрос: {question}", addition=f"Имеются списки:\n{user.get_list_str()}")
+        answer = provider_client.chat_sync(f"\n{answer}\n\nВопрос: {question}", addition=f"Имеются списки:\n{user.get_list_str()}")
 
         return answer
 
@@ -113,14 +113,13 @@ def search(answer: dict, question: str = "") -> str:
 
         # Запрос к LLM
         if search == "llm_smart":
-            provider_client.load_prompt("semantic")  # Загрузка промпта
+            provider_client.load_prompt("llm_smart")  # Загрузка промпта
             provider_client.set_model("gpt-4.1-mini")  # gpt-4.1-mini
         else:
-            provider_client.load_prompt("simple_answer")  # Загрузка промпта
+            provider_client.load_prompt("llm_lite")  # Загрузка промпта
             provider_client.set_model("gpt-4.1-nano")  # gpt-4.1-mini
 
-        simplify_answer = simplify_notes_for_llm(answer)
-        answer = provider_client.chat_sync(f"\n{simplify_answer}\n\nВопрос: {question}", addition=f"Имеются списки:\n{user.get_list_str()}")
+        answer = provider_client.chat_sync(f"\n{answer}\n\nВопрос: {question}", addition=f"Имеются списки:\n{user.get_list_str()}")
 
         try:
             out = eval("f'" + answer + "'")

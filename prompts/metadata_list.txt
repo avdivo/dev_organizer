@@ -1,5 +1,6 @@
 # === счетные_величины ===
 count_object: штука
+count_man: человек
 length_st: шаг
 percent: процент
 rating_score: балл
@@ -36,14 +37,15 @@ length_cm: сантиметр
 length_mm: миллиметр
 
 ## --- время ---
-time_s: секунда
-time_min: минута
-time_h: час
-time_day: день
-time_wk: неделя
-time_mon: месяц
-time_yr: год
-time_cent: век
+second: секунда
+minute: минута
+hour: час
+day: день
+week: неделя
+month: месяц
+quarter: квартал
+year: год
+century: век
 
 ## --- температура ---
 temperature_c: градус

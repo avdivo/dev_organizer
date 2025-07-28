@@ -60,12 +60,12 @@ class EmbeddingDatabase:
         """
 
         # Выводит все записи из базы
-        results = self.vector_store._collection.get(where={"user": {"$eq": "1"}})
-        for i in range(len(results["ids"])):
-            print(f"ID: {results['ids'][i]}")
-            print(f"Metadata: {results['metadatas'][i]}")
-            print(f"Document: {results['documents'][i]}")
-            print("-" * 40)
+        # results = self.vector_store._collection.get(where={"user": {"$eq": "1"}})
+        # for i in range(len(results["ids"])):
+        #     print(f"ID: {results['ids'][i]}")
+        #     print(f"Metadata: {results['metadatas'][i]}")
+        #     print(f"Document: {results['documents'][i]}")
+        #     print("-" * 40)
 
         # Формируем словарь параметров запроса
         if query_text:
@@ -73,7 +73,7 @@ class EmbeddingDatabase:
             # results = self.vector_store.similarity_search(query=query_text, k=k, filter=filter_metadata)
             print("-" * 40)
             print(f"Запрос:\n Строка для поиска: {query_text} Фильры: filter_metadata\n")
-            results = self.vector_store.similarity_search(query=query_text, k=k, filter=filter_metadata)
+            results = self.vector_store.similarity_search_with_score(query=query_text, k=k, filter=filter_metadata)
             print("Результат семантического запроса", results)
             print("-" * 40)
             if not results:
