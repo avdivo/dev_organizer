@@ -75,35 +75,23 @@ class AIClient:
         """
         # Получение сегодняшней даты и времени
         iso_time, weekday_name = get_current_time_and_weekday()
+        # Имя файла с промптом
+        prompt_name = "prompts/" + query_prompt + ".txt"
 
         """Читает файл и разделяет system и user промпты."""
-        with open("prompts/" + query_prompt + ".txt", "r", encoding="utf-8") as f:
+        with open(prompt_name, "r", encoding="utf-8") as f:
             content = f.read().split("---")  # Разделяем system и user по "---"
 
+            # Извлекаем и сохраняем системную часть промпта
             self.system_prompt = content[0].replace("SYSTEM:\n", "").strip()
-
-            # Добавляем дату и время
+            content = content[1]  # И User часть
+            # Добавляем дату и время в User часть
             self.user_base_prompt = f"Сейчас: {iso_time} {weekday_name}\n\n"
-            self.user_base_prompt += (
-                "ПРАВИЛА ДЛЯ ДАТ:\nДату, указания на дату (например вчера, сегодня, через полчаса и др) переводи в даты."
-                "Учитывай, на прошлое, настоящее или будущее указывает фраза запроса: "
-                "'потратили' - прошедшее время, 'потратим' - будущее время."
-                "Даты в текстах пиши: день месяц (словом) год (или без года если понятно по контексту)\n"
-                "Время в текстах пиши: hh часов mm минут, "
-                "или разговорным при ровных минутах, где это уместно: половина восьмого, без десяти два.\n"
-                "остальные числительные пиши строго цифрами.\n"
-                "В JSON полях дату и время указывай в ISO 8601. Часовой пояс +3.\n\n"
-                "ПРАВИЛА ДЛЯ ЧИСЕЛ\nВсе числительные в запросах переводи из текста в цифры. Например:"
-                "'одна' -> 1, '10.5 млн' -> 10500000, 'третья'-> 3")
 
-            self.user_base_prompt += content[1].replace("USER:\n", "").strip()
+            # Дополняем USER часть промпта вставками
 
-        # Добавляем метаданные
-        with open("prompts/metadata_list.txt", "r", encoding="utf-8") as f:
-            text = f.read()
+            self.user_base_prompt +=
 
-        metadata_list = ", ".join([item.strip() for item in text.split(",") if item.strip()])
-        self.user_base_prompt = self.user_base_prompt.replace("<metadata list>", metadata_list)
 
     @traceable
     def chat_sync(self, user_message: str, addition: str = "") -> Optional[str]:

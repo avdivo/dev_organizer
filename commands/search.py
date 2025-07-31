@@ -5,7 +5,7 @@ from provider_client import WorkerThread
 from user import user
 from config import embedding_db, provider_client
 from functions import (extract_json_to_dict, transform_filters,
-                       get_filter_response_llm, simplify_notes_for_llm)
+                       get_filter_response_llm)
 
 
 def search(answer: dict, question: str = "") -> str:

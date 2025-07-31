@@ -1,3 +1,4 @@
+import os
 import re
 import json
 import time
@@ -10,52 +11,6 @@ from config import scheduler, embedding_db
 from datetime import datetime, timezone
 from dateutil import parser
 
-
-# def convert_to_chroma_filter(data: Dict[str, str]) -> Union[Dict[str, Any], None]:
-#     """
-#     Преобразует словарь с фильтрами в формат ChromaDB с автоматическим преобразованием чисел.
-#
-#     :param data: Словарь, где ключи — поля, а значения могут содержать операторы (> , < , = , <= , >=).
-#     :return: Корректный фильтр для ChromaDB.
-#     """
-#     chroma_conditions = []
-#
-#     operator_mapping = {
-#         "=": "$eq",
-#         ">": "$gt",
-#         "<": "$lt",
-#         ">=": "$gte",
-#         "<=": "$lte",
-#     }
-#
-#     for key, value in data.items():
-#         if not value:  # Пропускаем пустые значения
-#             continue
-#
-#         match = re.match(r"^(>=|<=|>|<|=)?\s*(.+)$", value)
-#         if match:
-#             operator, real_value = match.groups()
-#             if not operator:
-#                 operator = "="  # Если оператор отсутствует, считаем его равенством
-#
-#             # Попытка преобразования числа (если возможно)
-#             try:
-#                 if key != "user":
-#                     # id пользователя оставляем строчным
-#                     real_value = float(real_value) if "." in real_value else int(real_value)
-#             except ValueError:
-#                 pass  # Оставляем как строку, если не число
-#
-#             chroma_conditions.append({key: {operator_mapping[operator]: real_value}})
-#
-#     # 🔹 Убираем "$and", если только одно условие (чтобы избежать ошибки ChromaDB)
-#     if not chroma_conditions:
-#         return None
-#     elif len(chroma_conditions) == 1:
-#         return chroma_conditions[0]
-#     else:
-#         return {"$and": chroma_conditions}
-#
 
 def extract_json_to_dict(text: str) -> Optional[Union[Dict[str, Any], List[Any]]]:
     """
@@ -245,24 +200,27 @@ def get_filter_response_llm(response: str) -> List[Dict]:
     return out
 
 
-def simplify_notes_for_llm(raw_notes: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    """
-    Преобразует список заметок в упрощённый формат, удобный для обработки моделью.
+def replace_any_placeholders(file_path):
+    # Читаем основной файл
+    with open(file_path, 'r', encoding='utf-8') as f:
+        content = f.read()
 
-    Оставляет только поля: "datetime_create", "text", "list_name", "completed", "datetime_reminder".
-    Все поля извлекаются через .get(), чтобы избежать KeyError при отсутствии.
+    # Шаблон: всё что между < и >
+    pattern = r"<([^<>]+)>"
+    matches = re.findall(pattern, content)
 
-    :param raw_notes: Список заметок в исходной вложенной структуре
-    :return: Список заметок в упрощённом виде
-    """
-    simplified = []
-    for item in raw_notes:
-        metadata = item.get("metadata", {})
-        simplified.append({
-            "datetime_create": metadata.get("datetime_create"),
-            "text": metadata.get("text"),
-            "list_name": metadata.get("list_name"),
-            "completed": metadata.get("completed"),
-            "datetime_reminder": metadata.get("datetime_reminder")  # может быть None
-        })
-    return simplified
+    # Получаем путь к папке
+    base_dir = os.path.dirname(file_path)
+
+    for match in matches:
+        # Формируем имя файла, добавляя .txt
+        replacement_file = os.path.join(base_dir, f"{match}.txt")
+        if os.path.exists(replacement_file):
+            with open(replacement_file, 'r', encoding='utf-8') as rf:
+                replacement_text = rf.read().strip()
+                replacement_block = f"\n{replacement_text}\n"
+                content = content.replace(f"<{match}>", replacement_block)
+        else:
+            print(f"⚠️ Файл не найден: {replacement_file}")
+
+    return content
