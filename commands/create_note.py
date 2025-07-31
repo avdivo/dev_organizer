@@ -5,9 +5,9 @@ from user import user
 from config import embedding_db, provider_client, DEFAULT_LIST
 from functions import extract_json_to_dict, iso_timestamp_converter, get_metadata_response_llm
 from services import get_current_time_and_weekday
+from errors import QueryEmptyError, ModelAnswerError
 
-
-def create_note(answer: dict) -> bool:
+def create_note(answer: dict) -> str:
     """
     Добавляет новую заметку для текущего пользователя, в заданный список.
 
@@ -20,12 +20,12 @@ def create_note(answer: dict) -> bool:
         }
 
     Returns:
-        bool: False - сообщаем что заметка не создана, True - создана
+        bool: str Строка ответа
     """
     query = answer.get("query")  # Получаем запрос
     # Если запрос пустой нужно попросить повторить
     if not query:
-        return False
+        raise QueryEmptyError()
 
     list_name = answer.get("list_name")
     # Если целевой список не указан, сохраняем в список по умолчанию
@@ -37,12 +37,12 @@ def create_note(answer: dict) -> bool:
 
     print("Запуск основного запроса:", time.time() - start)
     provider_client.load_prompt("create_note")  # Загрузка промпта
-    provider_client.set_model("gpt-4.1")  # gpt-4.1-mini
+    provider_client.set_model("gpt-4.1-mini")  # gpt-4.1-mini
     answer = provider_client.chat_sync(" " + query, addition=f"Имеются списки:\n{user.get_list_str()}")
     print("Ответ LLM:\n", answer)
 
     if not answer:
-        return False
+        raise ModelAnswerError("Нет ответа.")
 
     try:
         notes = extract_json_to_dict(answer)  # Преобразуем ответ в list
@@ -51,7 +51,7 @@ def create_note(answer: dict) -> bool:
         print("Основной ответ:", notes)
         print("Сразу после отработки основного запроса:", time.time() - start)
     except:
-        return False
+        raise ModelAnswerError("Ошибка обработки ответа.")
 
     # Добавляем метаданные в заметки
     print("Перед добавлением метаданных:", time.time() - start)
@@ -84,7 +84,9 @@ def create_note(answer: dict) -> bool:
     print("Документы:", documents)
     print("Метаданные:", metadatas_new)
     print("Время обработки запросов в llm", time.time() - start)
-    return True
+
+    return "Добавлено: " + ", ".join(documents)
+
 
 
 

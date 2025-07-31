@@ -11,3 +11,21 @@ class AuthorizationError(UserError):
     """Ошибка: Неправильные учетные данные или недостаточно прав."""
     def __init__(self, message: str = "⚠️ Ошибка авторизации: Доступ запрещен."):
         super().__init__(message)
+
+class QueryError(Exception):
+    """Базовый класс для ошибок, связанных с запросами."""
+    pass
+
+class QueryEmptyError(QueryError):
+    """Пустой запрос."""
+    def __init__(self):
+        super().__init__(f"⚠️ Пустой запрос.")
+
+class ModelError(Exception):
+    """Базовый класс для ошибок, связанных с моделями."""
+    pass
+
+class ModelAnswerError(ModelError):
+    """Неправильный ответ модели."""
+    def __init__(self, message: str):
+        super().__init__(f"⚠️ Модель вернула некорректный ответ. {message}")

@@ -56,7 +56,7 @@ def search(answer: dict, question: str = "") -> str:
 
     if is_metadata:
         thread.join()  # Ожидаем завершения потока с поиском метаданных
-        print("Выборка метаданных для поиска:\n", thread.result, "\n")
+        print("Уточнение метаданных для поиска:\n", thread.result, "\n")
         add_filter = get_filter_response_llm(thread.result)  # Получаем список фильтров метаданных
     else:
         add_filter = []
@@ -65,8 +65,8 @@ def search(answer: dict, question: str = "") -> str:
     # Получаем фильтры дат и добавляем к ним фильтры других метаданных
     f = answer_dict.get("filters", [])
     # выбираем только нужные поля
+    filters = add_filter
     try:
-        filters = add_filter
         for item in f:
             field, f = next(iter(item.items()))
             if field in ["datetime_reminder", "datetime_create"]:
@@ -85,44 +85,58 @@ def search(answer: dict, question: str = "") -> str:
     else:
         filters = filters[0]
 
-    print("Фильтры\n", filters, "\n")
-
     if search == "semantic" :
         essence = answer_dict.get("essence", question)  # Суть поисковой фразы
         # Поиск по смыслу с фильтрами
-        answer = embedding_db.get_notes(query_text=essence, filter_metadata=filters, get_metadata=True)
-        print('==================+++++++++++++++++++++++--------------------------\n', answer)
+        answer = embedding_db.get_notes_semantic(query_text=essence, filter_metadata=filters)
 
         # Запрос к модели
-        provider_client.load_prompt("semantic")  # Загрузка промпта
-        provider_client.set_model("gpt-4.1-nano")  # gpt-4.1-mini
-        answer = provider_client.chat_sync(f"\n{answer}\n\nВопрос: {question}", addition=f"Имеются списки:\n{user.get_list_str()}")
-
-        return answer
+        # provider_client.load_prompt("semantic")  # Загрузка промпта
+        provider_client.load_prompt("llm_smart")  # Загрузка промпта
+        provider_client.set_model("gpt-4.1-mini")  # gpt-4.1-mini
 
     else:
         # Поиск по фильтрам
-        query = {"filter_metadata": filters, "get_metadata": False if search == "filter" else True}
+        query = {"filter_metadata": filters}
         if where_document:
-            query["word_for_search"] = {"$contains": where_document}
+            query["word_for_search"] = {"$contains": where_document.lower()}
 
-        answer = embedding_db.get_notes(**query)  # Получение записей из БД
+        answer = embedding_db.get_notes_filter(**query)  # Получение записей из БД
 
-        if search == "filter":
-            return ', '.join(text for text in answer)
+    if search == "filter":
+        return ',\n'.join(item["page_content"] for item in answer)
+    elif search == "llm_smart":
+        provider_client.load_prompt("llm_smart")  # Загрузка промпта
+        provider_client.set_model("gpt-4.1-mini")  # gpt-4.1-mini
+    # elif search == "llm_lite":
+    #     provider_client.load_prompt("llm_lite")  # Загрузка промпта
+    #     provider_client.set_model("gpt-4.1-nano")  # gpt-4.1-mini
 
-        # Запрос к LLM
-        if search == "llm_smart":
-            provider_client.load_prompt("llm_smart")  # Загрузка промпта
-            provider_client.set_model("gpt-4.1-mini")  # gpt-4.1-mini
-        else:
-            provider_client.load_prompt("llm_lite")  # Загрузка промпта
-            provider_client.set_model("gpt-4.1-nano")  # gpt-4.1-mini
+    answer = provider_client.chat_sync(f"\n{answer}\n\nВопрос: {question}", addition=f"Имеются списки:\n{user.get_list_str()}")
 
-        answer = provider_client.chat_sync(f"\n{answer}\n\nВопрос: {question}", addition=f"Имеются списки:\n{user.get_list_str()}")
+    try:
+        out = eval("f'" + answer + "'")
+    except:
+        out = "Задание провалено, ошибка модели. Повторите запрос.\n" + answer
+    return out
 
-        try:
-            out = eval("f'" + answer + "'")
-        except:
-            out = "Задание провалено, ошибка модели. Повторите запрос.\n" + answer
-        return out
+# добавь список кладовка
+# добавь в кладовку лобзик на 1 полку
+# добавь в кладовку дрель на 1 полку
+# добавь в кладовку ручной инструмент на 2 полку
+# добавь в кладовку крепеж на 3 полку
+# добавь в кладовку электрику на 4 полку
+
+# filter:
+# что на полке номер два
+# что на второй полке
+# что в кладовке
+
+# llm_smart:
+# cколько полок в кладовке
+# на какой полке больше всего предметов
+
+# semantic:
+# электроинструмент есть в кладовке
+# где в кладовке шурупы
+# где гвозди

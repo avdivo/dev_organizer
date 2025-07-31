@@ -210,8 +210,7 @@ def get_metadata_response_llm(metadata: List[Dict]) -> Dict:
             continue
 
         # Запрос к БД
-        answer = embedding_db.get_notes(query_text=text,
-                                        filter_metadata=filters, k=1, get_metadata=True)
+        answer = embedding_db.get_notes_semantic(query_text=text, filter_metadata=filters)
         if not answer: continue
         metadata_field = answer[0].get("metadata", {}).get("ids")  # Получаем название поля
         if not metadata_field: continue
@@ -236,8 +235,7 @@ def get_filter_response_llm(response: str) -> List[Dict]:
         text, f = next(iter(imem.items()))  # Категория (определенная ИИ) и фильтр
 
         # Запрос к БД
-        answer = embedding_db.get_notes(query_text=text,
-                                        filter_metadata=filters, k=1, get_metadata=True)
+        answer = embedding_db.get_notes_semantic(query_text=text, filter_metadata=filters)
 
         if not answer: continue
         metadata_field = answer[0].get("metadata", {}).get("ids")  # Получаем название поля

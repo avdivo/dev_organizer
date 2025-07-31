@@ -4,6 +4,7 @@ count_man: человек
 length_st: шаг
 percent: процент
 rating_score: балл
+place: полка, место
 
 # === порядковые_величины ===
 number: номер

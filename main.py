@@ -1,11 +1,13 @@
 import os
 import time
 import json
+from dateparser.search import search_dates
+
 
 from user import user
 from commands import *
 from config import provider_client, LANGSMITH_API_KEY, DEFAULT_LIST, scheduler
-
+from errors import QueryEmptyError, ModelAnswerError
 
 os.environ["LANGCHAIN_API_KEY"] = LANGSMITH_API_KEY
 os.environ["LANGCHAIN_PROJECT"] = "dev_organizer"
@@ -75,12 +77,18 @@ while True:
 
     if user_input == '0':
         break
-
-
-    provider_client.load_prompt("query_parser")  # Загрузка промпта
-    provider_client.set_model("gpt-4.1-mini")  #gpt-3.5-turbo gpt-4.1-mini
+    if not user_input:
+        continue
 
     user_message = user_input
+
+    provider_client.load_prompt("query_parser")  # Загрузка промпта
+    # Выбор модели, слабые содели плохо работают с датами,
+    # поэтому используем модель посильнее
+    if search_dates(user_message):
+        provider_client.set_model("gpt-4.1")  #gpt-3.5-turbo gpt-4.1-mini
+    else:
+        provider_client.set_model("gpt-4.1-nano")
 
     answer = provider_client.chat_sync(user_message, addition=f"Имеются списки:\n{user.get_list_str()}")
     provider_client.set_model("gpt-4.1-mini")
@@ -99,10 +107,11 @@ while True:
 
         # ----------------------------- Создание заметки ---------------------------
         elif action == "create_note":
-            if create_note(matadata):
-                print("Заметка сохранена.")
-            else:
-                print("Заметка не создана. Повторите запрос.")
+            try:
+                answer = create_note(matadata)
+            except (QueryEmptyError, ModelAnswerError) as e:
+                answer = e
+            print(answer)
 
         # ----------------------------- Создание напоминания ---------------------------
         elif action == "create_reminder":
