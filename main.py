@@ -70,7 +70,7 @@ while True:
     user.load_by_alice_id(alice_id="12345678")
 
     # Выводим информацию
-    print(user.name, user.lists)  # Теперь объект заполнен данными!
+    print(f"{user.name}\n{user.get_list_str()}")  # Теперь объект заполнен данными!
 
     user_input = input("Команда: ")
     start_time = time.time()
@@ -90,7 +90,9 @@ while True:
     else:
         provider_client.set_model("gpt-4.1-nano")
 
-    answer = provider_client.chat_sync(user_message, addition=f"Имеются списки:\n{user.get_list_str()}")
+    answer = provider_client.chat_sync(
+        user_message,
+        addition=f"Списки (папки) в них записываются заметки:\n{user.get_list_str()}")
     provider_client.set_model("gpt-4.1-mini")
     print(answer)
 
@@ -98,6 +100,13 @@ while True:
         # matadata = {'action': 'create_note', 'list_name': 'заметка', 'query': user_input}
         matadata = json.loads(answer)
         action = matadata.get("action")
+        list_name = matadata.get("list_name", "")
+
+        # Проверяем название списка, если оно есть, но отсутствует
+        # в списках пользователя и это не создание списка - отменяем выполнение
+        if list_name and list_name not in user.get_list_str() and action != "create_list":
+            print("Нет указанного списка.\n")
+            continue
 
         # ----------------------------- Создание списка -----------------------------
         if action == "create_list":
@@ -120,7 +129,10 @@ while True:
 
         # ----------------------------- Поиск ---------------------------
         elif action == "search":
-            answer = search(answer=matadata, question=user_input)
+            try:
+                answer = search(answer=matadata, question=user_input)
+            except (QueryEmptyError, ModelAnswerError) as e:
+                answer = e
             print(answer)
 
         else:

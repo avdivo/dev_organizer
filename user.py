@@ -60,6 +60,7 @@ class User:
     def get_list_str(self):
         """
         Возвращает список списков пользователя строкой
+        :argument notation: str Текст выводится перед списком с переводом строки
         :return: str
         """
         return list(self.lists.keys())

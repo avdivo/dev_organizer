@@ -1,4 +1,3 @@
-import os
 import re
 import json
 import time
@@ -198,29 +197,3 @@ def get_filter_response_llm(response: str) -> List[Dict]:
         out.append({metadata_field: f})
 
     return out
-
-
-def replace_any_placeholders(file_path):
-    # Читаем основной файл
-    with open(file_path, 'r', encoding='utf-8') as f:
-        content = f.read()
-
-    # Шаблон: всё что между < и >
-    pattern = r"<([^<>]+)>"
-    matches = re.findall(pattern, content)
-
-    # Получаем путь к папке
-    base_dir = os.path.dirname(file_path)
-
-    for match in matches:
-        # Формируем имя файла, добавляя .txt
-        replacement_file = os.path.join(base_dir, f"{match}.txt")
-        if os.path.exists(replacement_file):
-            with open(replacement_file, 'r', encoding='utf-8') as rf:
-                replacement_text = rf.read().strip()
-                replacement_block = f"\n{replacement_text}\n"
-                content = content.replace(f"<{match}>", replacement_block)
-        else:
-            print(f"⚠️ Файл не найден: {replacement_file}")
-
-    return content

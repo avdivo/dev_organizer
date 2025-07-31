@@ -1,4 +1,5 @@
 import os
+import re
 import time
 import openai
 import asyncio
@@ -84,13 +85,29 @@ class AIClient:
 
             # Извлекаем и сохраняем системную часть промпта
             self.system_prompt = content[0].replace("SYSTEM:\n", "").strip()
-            content = content[1]  # И User часть
-            # Добавляем дату и время в User часть
+            content = content[1].replace("USER:\n", "").strip()  # И User часть
+
+            # Шаблон: всё между <- и ->
+            pattern = r"<-([^<>]+)->"
+            matches = re.findall(pattern, content)
+
+            base_dir = os.path.dirname(prompt_name)
+
+            for match in matches:
+                replacement_file = os.path.join(base_dir, f"{match}.txt")
+                if os.path.exists(replacement_file):
+                    with open(replacement_file, 'r', encoding='utf-8') as rf:
+                        replacement_text = rf.read().strip()
+                        replacement_block = f"\n{replacement_text}\n"
+                        content = content.replace(f"<-{match}->", replacement_block)
+                else:
+                    print(f"⚠️ Файл вставки в промпт не найден: {replacement_file}")
+
+            # Добавляем дату и время в User часть промпта
             self.user_base_prompt = f"Сейчас: {iso_time} {weekday_name}\n\n"
 
-            # Дополняем USER часть промпта вставками
-
-            self.user_base_prompt +=
+            # Добавляем USER часть промпта со вставками
+            self.user_base_prompt += content
 
 
     @traceable

@@ -3,6 +3,7 @@ import time
 
 from provider_client import WorkerThread
 from user import user
+from errors import QueryEmptyError, ModelAnswerError
 from config import embedding_db, provider_client
 from functions import (extract_json_to_dict, transform_filters,
                        get_filter_response_llm)
@@ -24,7 +25,7 @@ def search(answer: dict, question: str = "") -> str:
     query = answer.get("query")  # Получаем запрос
     # Если запрос пустой нужно попросить повторить
     if not query:
-        return "Задание провалено, запрос пустой. Повторите запрос."
+        raise QueryEmptyError()
 
     list_name = answer.get("list_name", "")  # Получаем название списка
 
@@ -43,14 +44,14 @@ def search(answer: dict, question: str = "") -> str:
     # Запрос к LLM
     provider_client.load_prompt("search")  # Загрузка промпта
     provider_client.set_model("gpt-4.1")  # gpt-4.1-mini
-    answer = provider_client.chat_sync(" " + query, addition=f"Имеются списки:\n{user.get_list_str()}")
+    answer = provider_client.chat_sync(" " + query, addition=f"Списки (папки) в них записываются заметки:\n{user.get_list_str()}")
     if not answer:
-        return "Задание провалено, ИИ не ответил. Повторите запрос."
+        raise ModelAnswerError("Нет ответа..")
 
     try:
         answer_dict = extract_json_to_dict(answer)  # Преобразуем основной ответ в dict
     except:
-        return "Задание провалено, ИИ сказал что то не то. Повторите запрос."
+        raise ModelAnswerError("Ошибка обработки основного ответа.")
 
     print("Основной запрос поиска:\n", answer, "\n")
 
@@ -112,7 +113,7 @@ def search(answer: dict, question: str = "") -> str:
     #     provider_client.load_prompt("llm_lite")  # Загрузка промпта
     #     provider_client.set_model("gpt-4.1-nano")  # gpt-4.1-mini
 
-    answer = provider_client.chat_sync(f"\n{answer}\n\nВопрос: {question}", addition=f"Имеются списки:\n{user.get_list_str()}")
+    answer = provider_client.chat_sync(f"\n{answer}\n\nВопрос: {question}", addition=f"Списки (папки) в них записываются заметки:\n{user.get_list_str()}")
 
     try:
         out = eval("f'" + answer + "'")
