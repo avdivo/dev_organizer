@@ -1,6 +1,5 @@
 import os
 import re
-import time
 import openai
 import asyncio
 import threading
@@ -20,7 +19,7 @@ load_dotenv()
 PROVIDER_URL = "https://api.cometapi.com/v1"
 key_name = "COMETAPI_KEY"
 MODEL_PROVIDER_KEY = os.getenv(key_name)
-
+DEFAULT_TEMPERATURE = 0
 
 class AIClient:
     """
@@ -46,6 +45,7 @@ class AIClient:
         self.model = model
         self.system_prompt = ""
         self.user_base_prompt = ""
+        self.prompt_name = ""
         # self.client = openai.OpenAI(api_key=api_key)
         # self.client = wrap_openai(openai.OpenAI(api_key=api_key))
 
@@ -109,9 +109,19 @@ class AIClient:
             # Добавляем USER часть промпта со вставками
             self.user_base_prompt += content
 
+            # Запоминаем какой промпт используем
+            self.prompt_name = query_prompt
+
+    def report(self) -> str:
+        """
+        Строковый отчет об использовании модели и промпта
+        :return: название модели и промпта
+        """
+        return f"Модель: {self.model}, Промпт: {self.prompt_name}"
 
     @traceable
-    def chat_sync(self, user_message: str, addition: str = "") -> Optional[str]:
+    def chat_sync(self, user_message: str, addition: str = "",
+                  temperature = DEFAULT_TEMPERATURE) -> Optional[str]:
         """
         Синхронный вызов OpenAI API.
 
@@ -127,7 +137,8 @@ class AIClient:
                 messages=[
                     {"role": "system", "content": self.system_prompt},
                     {"role": "user", "content": f"{addition}\n\n{self.user_base_prompt}\n{user_message}"}
-                ]
+                ],
+                temperature=temperature
             )
             return response.choices[0].message.content
         except Exception as e:
@@ -163,7 +174,7 @@ class WorkerThread(threading.Thread):
 
     def __init__(self, prompt_name: str, query: str, model: str = "gpt-4.1-mini"):
         super().__init__()
-        print("✅ Инициализация клиента провайдера модели")
+        # print("✅ Инициализация клиента провайдера модели")
         self.openai_client: AIClient = AIClient()  # Создаем объект
         self.prompt_name: str = prompt_name
         self.query: str = query
@@ -172,12 +183,9 @@ class WorkerThread(threading.Thread):
 
     def run(self) -> None:
         """Запускает обработку запроса в модели и записывает результат."""
-        print("✅ Запуск потока")
-        start = time.time()
         self.openai_client.load_prompt(self.prompt_name)  # Загружаем промпт
         self.openai_client.set_model(self.model)
         self.result = self.openai_client.chat_sync(" " + self.query)  # Получаем ответ
-        print("Запрос в потоке выполнялся", time.time() - start)
 
 # ✅ Запуск нескольких потоков и ожидание их завершения
 # openai_client = OpenAIClient()

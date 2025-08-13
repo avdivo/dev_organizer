@@ -1,10 +1,10 @@
 import os
 from dotenv import load_dotenv
-from langchain_openai import ChatOpenAI
 
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.jobstores.sqlalchemy import SQLAlchemyJobStore
 
+from logger import Logger
 from sql_db import SQLiteClient
 from provider_client import AIClient
 from embedding_db import EmbeddingDatabase

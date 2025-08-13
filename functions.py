@@ -30,12 +30,11 @@ def extract_json_to_dict(text: str) -> Optional[Union[Dict[str, Any], List[Any]]
         (?P<dict>\{(?:[^{}]|\{(?:[^{}]|\{[^{}]*\})*\})*\})|  # Словари
         (?P<list>\[(?:[^\[\]]|\[(?:[^\[\]]|\[[^\[\]]*\])*\])*\])  # Списки
     '''
-
+    json_str = text.replace("'", "")  # Удаляем одинарные кавычки
     for match in re.finditer(pattern, text, re.VERBOSE):
         json_str = match.group()
         try:
             # Пробуем распарсить как JSON (с обработкой одинарных кавычек)
-            json_str = json_str.replace("'", '"')  # Заменяем одинарные кавычки
             return json.loads(json_str)
         except json.JSONDecodeError:
             try:
@@ -175,6 +174,9 @@ def get_metadata_response_llm(metadata: List[Dict]) -> Dict:
 
 def get_filter_response_llm(response: str) -> List[Dict]:
     """
+    Преобразует текстовый ответ модели в формате JSON в список
+    выражений для поиска по фильтру
+
     :param response:
     :return: List - список словарей с метаданными [{"рубль, валюта": {"$gt": 5}}, ...]
     """
@@ -182,7 +184,6 @@ def get_filter_response_llm(response: str) -> List[Dict]:
         answer_list = extract_json_to_dict(response)  # Получаем ответ с метаданными от llm
     except:
         return []
-    print(answer_list)
     filters = {"system": {"$eq": "metadata_list"}}
     out = []
     for imem in answer_list:
@@ -197,3 +198,6 @@ def get_filter_response_llm(response: str) -> List[Dict]:
         out.append({metadata_field: f})
 
     return out
+
+
+print(iso_timestamp_converter(1754859599))

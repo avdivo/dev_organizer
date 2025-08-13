@@ -1,10 +1,10 @@
 import re
-import time
 
-from provider_client import WorkerThread
 from user import user
-from errors import QueryEmptyError, ModelAnswerError
+from logger import logger, Logger, read_filter, LOGGER_CONFIG
+from provider_client import WorkerThread
 from config import embedding_db, provider_client
+from errors import QueryEmptyError, ModelAnswerError
 from functions import (extract_json_to_dict, transform_filters,
                        get_filter_response_llm)
 
@@ -29,38 +29,84 @@ def search(answer: dict, question: str = "") -> str:
 
     list_name = answer.get("list_name", "")  # Получаем название списка
 
-    start = time.time()
     # Определяем наличие в тексте цифр и если они есть, запускаем параллельно
-    # промпт для нахождения метаданных в тексте
+    # модель для нахождения метаданных в тексте
     is_metadata = True if bool(re.search(r'\d', query)) else False
-
     if is_metadata:
         # В потоке запускаем поиск метаданных в запросе
-        print("Запуск в потоке:", time.time() - start)
-        thread = WorkerThread(prompt_name="search_filter", query=query, model="gpt-4.1-mini")
+        logger_thread = Logger(**LOGGER_CONFIG)  # Создаем экземпляр логера
+        prompt_name = "search_filter"
+        model = "gpt-4.1-mini"
+        thread = WorkerThread(prompt_name=prompt_name, query=query, model=model)
+
+        # Логирование
+        logger_thread.add_separator(type_sep=3)
+        logger_thread.timer_start("Поиск метаданных")
+        logger_thread.add_text(f"Модель: {model}, Промпт: {prompt_name}")
+        logger_thread.add_text(f"Запрос: {query}")
+
         thread.start()
-        print("Сразу после запуска в потоке:", time.time() - start)
 
     # Запрос к LLM
     provider_client.load_prompt("search")  # Загрузка промпта
     provider_client.set_model("gpt-4.1")  # gpt-4.1-mini
+
+    # Логирование
+    logger.add_separator(type_sep=2)
+    logger.timer_start("Поиск")
+    logger.add_text(provider_client.report())  # Модель и промпт
+    logger.add_text(f"Запрос: {query}")
+    logger.output()
+
     answer = provider_client.chat_sync(" " + query, addition=f"Списки (папки) в них записываются заметки:\n{user.get_list_str()}")
     if not answer:
         raise ModelAnswerError("Нет ответа..")
 
-    try:
-        answer_dict = extract_json_to_dict(answer)  # Преобразуем основной ответ в dict
-    except:
+
+    answer_dict = extract_json_to_dict(answer)  # Преобразуем основной ответ в dict
+    if not answer_dict:
         raise ModelAnswerError("Ошибка обработки основного ответа.")
 
-    print("Основной запрос поиска:\n", answer, "\n")
+    # Логирование результата
+    logger.add_separator(type_sep=2)
+    logger.add_text("Ответ модели:")
+    logger.add_json_answer(answer_dict)
+    logger.timer_stop("Поиск")
+    logger.output()
 
     if is_metadata:
         thread.join()  # Ожидаем завершения потока с поиском метаданных
-        print("Уточнение метаданных для поиска:\n", thread.result, "\n")
+
+        # Логирование ответа модели
         add_filter = get_filter_response_llm(thread.result)  # Получаем список фильтров метаданных
+        logger_thread.add_separator(type_sep=3)
+        logger_thread.add_text("Ответ модели:")
+        logger_thread.output()
+
+        # Логирование результата в разные места
+        for filter in add_filter:
+            logger.add_json_answer(filter)
+            logger.output(console=False)  # только в файл
+            logger.add_json_answer(*read_filter(filter))
+            logger.output(file=False)  # только в консоль
+        logger_thread.timer_stop("Поиск метаданных")
+        logger_thread.output()
     else:
         add_filter = []
+    print(f"""
+    Вернуть список:     {answer_dict.get("need_filter", 0)}
+    О списках:          {answer_dict.get("query_is_about_lists", 0)}
+    Количество:         {answer_dict.get("need_count", 0)}
+    Умный поиск:        {answer_dict.get("semantic", 0)}
+    Ответ через модель: {answer_dict.get("need_analysis", 0)}
+    Арифметика:         {answer_dict.get("need_calculation", 0)}
+    """)
+    return ""
+
+
+
+
+
 
     # Подготовка фильтров
     # Получаем фильтры дат и добавляем к ним фильтры других метаданных
@@ -75,6 +121,18 @@ def search(answer: dict, question: str = "") -> str:
     except:
         pass
 
+    # Определяем сложность запроса для выбора модели
+    complex = answer_dict.get("complex", 2.0)
+    model = "gpt-4.1-mini"
+    try:
+        if complex < 1:
+            model = "gpt-4.1-nano"
+        elif complex > 2:
+            model = "gpt-4.1"
+    except:
+        pass
+    provider_client.set_model(model)
+
     search = answer_dict.get("search", "semantic")  # Способ поиска
     where_document = answer_dict.get("where_document", "")  # Поиск слова в документе
     filters = transform_filters(filters)  # Преобразуем даты в timestamp и названия полей
@@ -86,15 +144,18 @@ def search(answer: dict, question: str = "") -> str:
     else:
         filters = filters[0]
 
+    logger_title = None
     if search == "semantic" :
         essence = answer_dict.get("essence", question)  # Суть поисковой фразы
         # Поиск по смыслу с фильтрами
         answer = embedding_db.get_notes_semantic(query_text=essence, filter_metadata=filters)
+        logger_title = "Модель после семантического поиска"  # Логирование
+
 
         # Запрос к модели
         # provider_client.load_prompt("semantic")  # Загрузка промпта
         provider_client.load_prompt("llm_smart")  # Загрузка промпта
-        provider_client.set_model("gpt-4.1-mini")  # gpt-4.1-mini
+        # provider_client.set_model(model)  # gpt-4.1-mini
 
     else:
         # Поиск по фильтрам
@@ -105,15 +166,30 @@ def search(answer: dict, question: str = "") -> str:
         answer = embedding_db.get_notes_filter(**query)  # Получение записей из БД
 
     if search == "filter":
+        # Логирование
+        logger.add_separator(type_sep=2)
+        logger.timer_start("Ответ после фильтра из БД")
         return ',\n'.join(item["page_content"] for item in answer)
     elif search == "llm_smart":
         provider_client.load_prompt("llm_smart")  # Загрузка промпта
-        provider_client.set_model("gpt-4.1-mini")  # gpt-4.1-mini
-    # elif search == "llm_lite":
-    #     provider_client.load_prompt("llm_lite")  # Загрузка промпта
-    #     provider_client.set_model("gpt-4.1-nano")  # gpt-4.1-mini
+        # provider_client.set_model("gpt-4.1-mini")  # gpt-4.1-mini
+        logger_title = "Модель после фильтра"  # Логирование
+
+    # Логирование
+    logger.add_separator(type_sep=2)
+    logger.timer_start(logger_title)
+    logger.add_text(provider_client.report())  # Модель и промпт
+    logger.add_text(f"В запросе: ответ БД и вопрос: {question}")
+    logger.output()
 
     answer = provider_client.chat_sync(f"\n{answer}\n\nВопрос: {question}", addition=f"Списки (папки) в них записываются заметки:\n{user.get_list_str()}")
+
+    # Логирование результата
+    logger.add_separator(type_sep=2)
+    logger.add_text("Ответ модели:")
+    logger.add_json_answer(answer)
+    logger.timer_stop(logger_title)
+    logger.output()
 
     try:
         out = eval("f'" + answer + "'")

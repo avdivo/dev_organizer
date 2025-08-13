@@ -9,3 +9,8 @@ pip install -U langchain langchain-community langchain-huggingface langchain-chr
 pip install langsmith  
 pip install aiosqlite
 
+
+
+Для фронтэнда рссмотреть:  
+https://appflowy.com/  
+https://joplinapp.org/

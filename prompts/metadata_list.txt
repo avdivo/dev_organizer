@@ -1,13 +1,19 @@
 # === счетные_величины ===
 count_object: штука
+count_object: действие, событие
 count_man: человек
 length_st: шаг
 percent: процент
 rating_score: балл
-place: полка, место
 
 # === порядковые_величины ===
 number: номер
+number: полка
+number: дом
+number: квартира
+number: офис
+number: автобус
+number: очередь
 
 # === финансовые_величины ===
 money_rub: рубль
