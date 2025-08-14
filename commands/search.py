@@ -1,12 +1,65 @@
 import re
 
+from sympy.polys.polyconfig import query
+
 from user import user
 from logger import logger, Logger, read_filter, LOGGER_CONFIG
-from provider_client import WorkerThread
+from models.provider_client import WorkerThread
 from config import embedding_db, provider_client
 from errors import QueryEmptyError, ModelAnswerError
+from models.llm_task_runner import LLMTaskRunner
 from functions import (extract_json_to_dict, transform_filters,
                        get_filter_response_llm)
+
+
+def search_manager(answer: dict, question: str = "") -> str:
+    """
+        :argument: answer (dict): Ответ модели:
+            {
+                "action": что сделать,
+                "query": запрос, очищенный от команды,
+                "list_name": название списка из списка ниже, если он указан
+            }
+        :argument: оригинальный запрос пользователя
+
+        :return:
+            str: ответ
+    """
+    query = answer.get("query")  # Получаем запрос
+    # Если запрос пустой нужно попросить повторить
+    if not query:
+        raise QueryEmptyError()
+
+    list_name = answer.get("list_name", "")  # Получаем название списка
+
+    # Запуск модели поиска метаданных
+    searcher_metadata = LLMTaskRunner(query, "search_filter", "gpt-4.1-mini", timer_label="Поиск метаданных")
+    searcher_metadata.start()
+
+    # Запуск модели парсинга поискового запроса
+    searcher_parser = LLMTaskRunner(
+        query=query,
+        prompt_name="search",
+        model="gpt-4.1",
+        addition=f"Списки (папки) в них записываются заметки:\n{user.get_list_str()}",
+        timer_label="Анализ поискового запроса")
+    # Запускаем анализ и тут же ожидание ответа и получаем ответ
+    answer_dict = searcher_parser.start().finish()
+
+    # Получаем ответ парсера метаданных
+    add_filter = searcher_metadata.finish()
+
+    print(f"""
+    Вернуть список:     {answer_dict.get("need_filter", 0)}
+    О списках:          {answer_dict.get("query_is_about_lists", 0)}
+    Количество:         {answer_dict.get("need_count", 0)}
+    Умный поиск:        {answer_dict.get("semantic", 0)}
+    Ответ через модель: {answer_dict.get("need_analysis", 0)}
+    Арифметика:         {answer_dict.get("need_calculation", 0)}
+    """)
+    return ""
+
+
 
 
 def search(answer: dict, question: str = "") -> str:
@@ -20,15 +73,10 @@ def search(answer: dict, question: str = "") -> str:
     :argument: оригинальный запрос пользователя
 
     :return:
-        str: ответ
+        dict: ответ можно посмотреть в промпте search.txt
     """
-    query = answer.get("query")  # Получаем запрос
-    # Если запрос пустой нужно попросить повторить
-    if not query:
-        raise QueryEmptyError()
 
-    list_name = answer.get("list_name", "")  # Получаем название списка
-
+    query = answer.get("query")
     # Определяем наличие в тексте цифр и если они есть, запускаем параллельно
     # модель для нахождения метаданных в тексте
     is_metadata = True if bool(re.search(r'\d', query)) else False

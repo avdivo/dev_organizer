@@ -4,9 +4,8 @@ from dotenv import load_dotenv
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.jobstores.sqlalchemy import SQLAlchemyJobStore
 
-from logger import Logger
 from sql_db import SQLiteClient
-from provider_client import AIClient
+from models.provider_client import AIClient
 from embedding_db import EmbeddingDatabase
 from create_tables import SQLiteTableCreator
 

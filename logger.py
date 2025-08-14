@@ -90,7 +90,7 @@ class Logger:
 
     def add_json_answer(self, text: dict):
         """
-        Добавляет в буфер текст
+        Добавляет в буфер текст преобразуя словарь
         :param text:
         """
         self.add_text(json.dumps(text, indent=4, sort_keys=True, ensure_ascii=False))

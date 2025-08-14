@@ -24,7 +24,7 @@ class EmbeddingDatabase:
         self.embedding_model = HuggingFaceEmbeddings(model_name=model_name)
         # self.vector_store = Chroma(persist_directory=persist_directory, embedding_function=self.embedding_model)
 
-        documents = self.load_metadata_entries("prompts/metadata_list.txt")
+        documents = self.load_metadata_entries("models/prompts/metadata_list.txt")
         self.vector_store = Chroma.from_documents(
             documents=documents,
             embedding=self.embedding_model,

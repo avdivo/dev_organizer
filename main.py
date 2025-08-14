@@ -107,7 +107,7 @@ while True:
         # ----------------------------- Поиск ---------------------------
         elif action == "search":
             try:
-                answer = search(answer=matadata, question=user_input)
+                answer = search_manager(answer=matadata, question=user_input)
             except (QueryEmptyError, ModelAnswerError) as e:
                 print(e)
                 # answer = str(e)

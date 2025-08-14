@@ -77,7 +77,7 @@ class AIClient:
         # Получение сегодняшней даты и времени
         iso_time, weekday_name = get_current_time_and_weekday()
         # Имя файла с промптом
-        prompt_name = "prompts/" + query_prompt + ".txt"
+        prompt_name = "models/prompts/" + query_prompt + ".txt"
 
         """Читает файл и разделяет system и user промпты."""
         with open(prompt_name, "r", encoding="utf-8") as f:
@@ -172,35 +172,22 @@ class WorkerThread(threading.Thread):
         result (Optional[str]): Результат запроса после выполнения потока.
     """
 
-    def __init__(self, prompt_name: str, query: str, model: str = "gpt-4.1-mini"):
+    def __init__(self, prompt_name: str, query: str, model: str = "gpt-4.1-mini", addition: str = ""):
         super().__init__()
         # print("✅ Инициализация клиента провайдера модели")
         self.openai_client: AIClient = AIClient()  # Создаем объект
         self.prompt_name: str = prompt_name
         self.query: str = query
         self.model = model
+        self.addition = addition
         self.result: Optional[str] = None  # Здесь будет результат после выполнения
 
     def run(self) -> None:
-        """Запускает обработку запроса в модели и записывает результат."""
+        """Запускает обработку запроса в модели и записывает результат.
+
+        Args:
+        addition (str): Дополнение к запросу
+        """
         self.openai_client.load_prompt(self.prompt_name)  # Загружаем промпт
         self.openai_client.set_model(self.model)
-        self.result = self.openai_client.chat_sync(" " + self.query)  # Получаем ответ
-
-# ✅ Запуск нескольких потоков и ожидание их завершения
-# openai_client = OpenAIClient()
-# requests = [
-#     ("create_note", "Первый запрос"),
-#     ("create_note", "Второй запрос"),
-# ]
-#
-# threads = [WorkerThread(openai_client, create_note, query) for create_note, query in requests]
-#
-# for thread in threads:
-#     thread.start()
-#
-# for thread in threads:
-#     thread.join()
-#
-# results = [thread.result for thread in threads]
-# print(results)  # ['Ответ 1', 'Ответ 2']
+        self.result = self.openai_client.chat_sync(" " + self.query, self.addition)  # Получаем ответ

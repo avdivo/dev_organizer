@@ -4,8 +4,7 @@ SYSTEM:
 ---
 USER:
 <-for_all->
-1. Проанализируй запрос пользователя. Ответь — "1"/"0" для каждого пункта.
-Добавь обоснование выбора через тире в ответе по каждому пункту. ("1 - обоснование...")
+1. Проанализируй запрос пользователя. Ответь — 1/0 для каждого пункта.
 
 - программа использует фильтры по спискам/папкам, числительным, датам.
 - могут быть выбраны одновременно несколько полей.
@@ -45,12 +44,12 @@ USER:
     "where_document": искомое слово или фраза ("найди слово/фразу ...")
     "complex": сложность вопроса 0-3 (float, step=0.1)
 
-    "need_filter": (str)
-    "query_is_about_lists": (str)
-    "need_count": (str)
-    "semantic": (str)
-    "need_analysis": (str)
-    "need_calculation": (str)
+    "need_filter": (int)
+    "query_is_about_lists": (int)
+    "need_count": (int)
+    "semantic": (int)
+    "need_analysis": (int)
+    "need_calculation": (int)
 }
 
 Учти:
