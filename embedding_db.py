@@ -3,6 +3,7 @@ from typing import Dict, List, Optional, Tuple
 from langchain_chroma import Chroma
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_core.documents import Document
+from sklearn.externals.array_api_compat.torch import where
 
 from logger import logger, read_filter
 

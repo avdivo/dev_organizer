@@ -79,7 +79,7 @@ class LLMTaskRunner:
         )
 
         # Логирование начала
-        self.logger_thread.add_separator(type_sep=3)
+        self.logger_thread.add_separator(type_sep=2)
         self.logger_thread.timer_start(self.timer_label)
         self.logger_thread.add_text(f"Модель: {self.model}")
         self.logger_thread.add_text(f"Промпт: {self.prompt_name}")
@@ -118,30 +118,30 @@ class LLMTaskRunner:
             return []
 
         self.thread.join()
-        print(self.thread.result)
+
         # Обработка результата — может вернуть list, dict
         result = extract_json_to_dict(self.thread.result)
 
         # Логируем ответ модели
-        self.logger_thread.add_separator(type_sep=3)
+        self.logger_thread.add_separator(type_sep=2)
+        self.logger_thread.timer_stop(self.timer_label)  # Останавливаем таймер
         self.logger_thread.add_text("Ответ модели:")
+        if not result:
+            self.logger_thread.add_text("Нет ответа")
         self.logger_thread.output()
 
         # Логируем в общий логгер (предполагаем, что это структурированные данные)
         if isinstance(result, list):
             for item in result:
                 self.logger_thread.add_json_answer(item)
-                self.logger_thread.output(console=False, file=True)  # только в файл
-                self.logger_thread.add_json_answer(*read_filter(item))
-                self.logger_thread.output(console=True, file=False)  # только в консоль
+                self.logger_thread.add_separator(type_sep=3)
+                self.logger_thread.output(console=True, file=True)  # только в файл
+                # self.logger_thread.add_json_answer(*read_filter(item))
+                # self.logger_thread.output(console=True, file=False)  # только в консоль
         elif isinstance(result, dict):
             self.logger_thread.add_json_answer(result)
-            self.logger_thread.output(console=False, file=True)
-            self.logger_thread.add_json_answer(read_filter(result))
-            self.logger_thread.output(console=True, file=False)
-
-        # Останавливаем таймер
-        self.logger_thread.timer_stop(self.timer_label)
-        self.logger_thread.output()
+            self.logger_thread.output(console=True, file=True)
+            # self.logger_thread.add_json_answer(read_filter(result))
+            # self.logger_thread.output(console=True, file=False)
 
         return result

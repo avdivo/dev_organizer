@@ -61,7 +61,7 @@ while True:
 
     answer = provider_client.chat_sync(
         user_message,
-        addition=f"Списки (папки) в них записываются заметки:\n{user.get_list_str()}")
+        addition=f"Имеющиеся списки (папки):\n{user.get_list_str()}")
     try:
         # matadata = {'action': 'create_note', 'list_name': 'заметка', 'query': user_input}
         matadata = json.loads(answer)
@@ -87,7 +87,6 @@ while True:
 
         # ----------------------------- Создание списка -----------------------------
         if action == "create_list":
-
             answer = create_list(matadata)
 
         # ----------------------------- Создание заметки ---------------------------
@@ -111,6 +110,10 @@ while True:
             except (QueryEmptyError, ModelAnswerError) as e:
                 print(e)
                 # answer = str(e)
+
+        # -------------------------- Очистка списка ---------------------------
+        elif action == "clear_list":
+            answer = search_manager(list_name)
 
     except Exception as e:
         raise

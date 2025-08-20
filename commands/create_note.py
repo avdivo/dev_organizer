@@ -42,7 +42,7 @@ def create_note(answer: dict) -> str:
     logger.output()
 
     answer = provider_client.chat_sync(" " + query,
-                                       addition=f"Списки (папки) в них записываются заметки:\n{user.get_list_str()}")
+                                       addition=f"Имеющиеся списки (папки):\n{user.get_list_str()}")
 
     if not answer:
         raise ModelAnswerError("Нет ответа.")
